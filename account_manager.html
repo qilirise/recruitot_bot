@@ -72,7 +72,8 @@ h1{font-size:22px;margin-bottom:6px}
 
 <script src="auth.js"></script>
 <script>
-const KEEP = 'zhenghh02';
+// 保留账户列表（其余全部删除）
+const KEEP_LIST = ['zhenghh02', 'tszld'];
 
 function render(){
   const users = Auth.getUsers();
@@ -82,7 +83,7 @@ function render(){
     tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--gray);padding:16px">暂无账户，请先注册</td></tr>';
   } else {
     tbody.innerHTML = users.map(u=>{
-      const isKeep = u.username === KEEP;
+      const isKeep = KEEP_LIST.includes(u.username);
       const isMe = me && me.uid === u.uid;
       return `<tr>
         <td><b>${esc(u.username)}</b>${isMe?' <span style="font-size:11px;color:var(--gray)">(当前登录)</span>':''}</td>
@@ -91,26 +92,26 @@ function render(){
       </tr>`;
     }).join('');
   }
-  const hasKeep = users.some(u=>u.username === KEEP);
+  const hasKeep = users.some(u=>KEEP_LIST.includes(u.username));
   document.getElementById('noZhenghh').style.display = hasKeep ? 'none' : 'block';
   document.getElementById('cleanBtn').disabled = !hasKeep;
-  if(!hasKeep){ document.getElementById('cleanBtn').textContent = '⚠️ 请先注册 zhenghh02'; }
+  if(!hasKeep){ document.getElementById('cleanBtn').textContent = '⚠️ 请先注册 zhenghh02 或 tszld'; }
 }
 
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 function cleanOthers(){
   const users = Auth.getUsers();
-  const keep = users.find(u=>u.username === KEEP);
-  if(!keep){ alert('未找到 zhenghh02 账户，请先注册'); return; }
-  if(!confirm('确定删除除 zhenghh02 外的所有账户及其数据？此操作不可恢复！')) return;
+  const keep = users.filter(u=>KEEP_LIST.includes(u.username));
+  if(!keep.length){ alert('未找到保留账户（zhenghh02 / tszld），请先注册'); return; }
+  if(!confirm(`确定删除除 ${KEEP_LIST.join('、')} 外的所有账户及其数据？此操作不可恢复！`)) return;
 
   const btn = document.getElementById('cleanBtn');
   btn.disabled = true; btn.textContent = '清理中…';
 
   const removed = [];
   users.forEach(u=>{
-    if(u.username === KEEP) return;
+    if(KEEP_LIST.includes(u.username)) return;
     removed.push(u.username);
     // 删除该用户的数据 key
     ['qiuzhao27_track_v1','qiuzhao27_entries_v1','qiuzhao27_mail_processed_v1'].forEach(base=>{
@@ -118,24 +119,27 @@ function cleanOthers(){
     });
   });
 
-  // 更新用户列表：只保留 zhenghh02
-  const newUsers = users.filter(u=>u.username === KEEP);
+  // 更新用户列表：只保留名单内账户
+  const newUsers = users.filter(u=>KEEP_LIST.includes(u.username));
   localStorage.setItem('qiuzhao27_users_v1', JSON.stringify(newUsers));
 
-  // 设 zhenghh02 为当前登录（单独隔离）
-  localStorage.setItem('qiuzhao27_session_v1', JSON.stringify({
-    uid: keep.uid, username: keep.username, loginAt: Date.now()
-  }));
+  // 设第一个保留账户为当前登录（单独隔离）
+  const first = newUsers[0];
+  if(first){
+    localStorage.setItem('qiuzhao27_session_v1', JSON.stringify({
+      uid: first.uid, username: first.username, loginAt: Date.now()
+    }));
+  }
 
   const ok = document.getElementById('okBox');
   ok.innerHTML = `✅ <b>清理完成！</b><br>
     已删除账户：${removed.length ? removed.map(esc).join('、') : '（无）'}<br>
-    已保留：<b>zhenghh02</b>（数据独立隔离，已设为当前登录）<br>
-    <a href="index.html" style="color:var(--primary);font-weight:700">→ 进入 zhenghh02 的看板</a>`;
+    已保留：<b>${KEEP_LIST.map(esc).join('、')}</b>（数据独立隔离，已设为当前登录）<br>
+    <a href="index.html" style="color:var(--primary);font-weight:700">→ 进入看板</a>`;
   ok.classList.add('show');
 
   render();
-  btn.disabled = false; btn.textContent = '🗑️ 删除其他账户（保留 zhenghh02）';
+  btn.disabled = false; btn.textContent = '🗑️ 删除其他账户（保留 zhenghh02 / tszld）';
 }
 
 render();

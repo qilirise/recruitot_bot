@@ -1240,9 +1240,11 @@ function reloadData(cb){
 }
 
 function renderAllData(){
-  // 数据更新后重渲染全部模块
+  // 数据更新后重渲染全部模块 + 更新时间戳组件
+  const now = new Date();
+  const ts = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0')+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0')+':'+String(now.getSeconds()).padStart(2,'0');
   const dt = document.getElementById('dataTime');
-  if(dt && DATA) dt.textContent = `⏱ 数据更新：${DATA.generatedAt||'--'}（来源：${MAIN_TAB?MAIN_TAB.title:''} ${MAIN_TAB?MAIN_TAB.records.length:0} 家）`;
+  if(dt && DATA) dt.textContent = `⏱ 数据更新：${DATA.generatedAt||'--'} · 本次刷新 ${ts}（来源：${MAIN_TAB?MAIN_TAB.title:''} ${MAIN_TAB?MAIN_TAB.records.length:0} 家）`;
   renderNew();
   renderD5();
   refreshStats();
@@ -1251,20 +1253,15 @@ function renderAllData(){
 }
 
 function startAutoRefresh(){
+  // 后台静默刷新：不显示倒计时、不弹提示
   if(autoRefreshTimer) return;
   let seconds = AUTO_REFRESH_MIN * 60;
   autoRefreshTimer = setInterval(()=>{
     seconds--;
-    const el = document.getElementById('autoRefreshHint');
-    if(el){
-      const m = Math.floor(seconds/60), s = seconds%60;
-      el.textContent = `⏱ 数据每 ${AUTO_REFRESH_MIN} 分钟自动刷新 · 下次 ${m}分${s}秒`;
-    }
     if(seconds <= 0){
       seconds = AUTO_REFRESH_MIN * 60;
       reloadData(()=>{
         renderAllData();
-        try{ toast('🔄 数据已自动刷新'); }catch(e){}
       });
     }
   }, 1000);
@@ -1278,10 +1275,6 @@ document.addEventListener('DOMContentLoaded',()=>{
     return;
   }
   document.getElementById('dataTime').textContent=`⏱ 数据更新：${DATA.generatedAt||'--'}（来源：${MAIN_TAB.title} ${MAIN_TAB.records.length} 家）`;
-  const dth=document.createElement('span');
-  dth.id='autoRefreshHint';
-  dth.style.cssText='font-size:11px;color:var(--gray);margin-left:10px';
-  document.getElementById('dataTime').after(dth);
   startAutoRefresh();
   const ub=document.getElementById('userBadge');
   if(ub && window.CURRENT_USER) ub.textContent=`👤 ${window.CURRENT_USER.username}`;
