@@ -135,6 +135,25 @@ header .sub{margin-top:6px;font-size:13px;opacity:.92}
 .reminder-flex{display:flex;gap:14px;align-items:stretch}
 .reminder-main{flex:1;min-width:0}
 .reminder-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+/* 面试提醒列 */
+.interview-side{width:320px;min-width:280px;display:flex;flex-direction:column;gap:10px}
+.itv-remind-list{display:flex;flex-direction:column;gap:10px;max-height:420px;overflow-y:auto}
+.itv-remind-card{background:var(--card);border:1px solid var(--border);border-left:4px solid #8b5cf6;border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow);transition:.15s}
+.itv-remind-card.today{border-left-color:#f59e0b}
+.itv-remind-card.tomorrow{border-left-color:#3b82f6}
+.itv-remind-card.overdue{border-left-color:#ef4444;opacity:.75}
+.itv-remind-card .irc-top{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.itv-remind-card .irc-name{font-weight:700;font-size:13.5px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.itv-remind-card .irc-time{font-size:12.5px;color:var(--text);font-weight:600;white-space:nowrap}
+.itv-remind-card .irc-meta{font-size:11.5px;color:var(--gray);margin-top:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.itv-remind-card .irc-src{font-size:10px;padding:1px 7px;border-radius:9px;background:rgba(139,92,246,.12);color:#8b5cf6;font-weight:600}
+.itv-remind-card .irc-src.mail{background:rgba(59,130,246,.12);color:#3b82f6}
+.itv-remind-card .irc-days{font-size:11px;font-weight:700}
+.itv-remind-card .irc-days.today{color:#f59e0b}
+.itv-remind-card .irc-days.tomorrow{color:#3b82f6}
+.itv-remind-card .irc-days.overdue{color:#ef4444}
+.itv-remind-card .irc-link{font-size:11.5px;margin-top:4px}
+@media(max-width:1200px){.interview-side{width:100%;min-width:0}}
 .reminder-card{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--amber);border-radius:var(--radius);padding:13px 16px;box-shadow:var(--shadow);transition:.15s}
 .reminder-card:hover{transform:translateY(-2px)}
 .reminder-card.overdue{border-left-color:var(--red);background:#fffafa}
@@ -360,7 +379,7 @@ footer{margin-top:30px;text-align:center;font-size:12px;color:var(--gray);line-h
       <span class="badge" id="todayBadge">📅 今天：--</span>
       <span class="badge" id="newCountBadge">🆕 今日新开：--</span>
       <span class="badge" id="dataTime">⏱ 数据更新：--</span>
-      <button class="header-btn ghost" onclick="window.location.reload()">🔄 刷新页面</button>
+      <button class="header-btn ghost" onclick="manualRefresh()">🔄 刷新数据</button>
       <a class="header-btn" href="mail.html" style="text-decoration:none">📧 邮件识别中心</a>
       <button class="header-btn" onclick="openGuide()">📖 使用说明</button>
       <span class="badge" id="userBadge">👤 --</span>
@@ -382,7 +401,12 @@ footer{margin-top:30px;text-align:center;font-size:12px;color:var(--gray);line-h
     </div>
     <div class="reminder-flex">
       <div class="reminder-main">
+        <div class="section-title" style="font-size:14px">⏰ 每日测评提醒 <span class="tag" id="reminderCount">0</span></div>
         <div class="reminder-grid" id="reminderGrid"></div>
+      </div>
+      <div class="interview-side">
+        <div class="section-title" style="font-size:14px">🎤 每日面试提醒 <span class="tag" id="itvRemindCount">0</span></div>
+        <div class="itv-remind-list" id="itvRemindList"></div>
       </div>
       <div class="side-cards">
         <div class="resume-side">
@@ -723,6 +747,95 @@ function renderReminder(){
     </div>`;
   }).join('');
 }
+/* ===== 每日面试提醒（数据源：已投递里的面试时间 + 邮件面试事件） ===== */
+function renderInterview(){
+  const list=document.getElementById('itvRemindList');
+  const cnt=document.getElementById('itvRemindCount');
+  if(!list) return;
+  const today=todayStr();
+  const tomorrow=daysAgoStr(-1);
+  const items=[];
+
+  // 1) 已投递追踪里设置的面试时间（itv[stage].time = 时间戳）
+  if(track && typeof track==='object'){
+    Object.keys(track).forEach(rid=>{
+      const st=track[rid];
+      if(!st || !st.itv) return;
+      const name=(MAIN_TAB&&MAIN_TAB.records.find(r=>r.id===rid)||{}).v?MAIN_TAB.records.find(r=>r.id===rid).v['公司名称']:'';
+      const customName = name || (window.ENTRIES_DATA && window.ENTRIES_DATA.entries ? (window.ENTRIES_DATA.entries.find(e=>e.id===rid)||{}).name : '') || rid;
+      for(let s=1;s<=3;s++){
+        const it=st.itv[s];
+        if(!it || !it.time) continue;
+        const d=new Date(it.time);
+        if(isNaN(d.getTime())) continue;
+        if(it.done) continue;                       // 已完成的面不提醒
+        items.push({
+          name: customName,
+          dt: d,
+          dateStr: d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'),
+          timeStr: String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'),
+          src: 'track',
+          stage: '第'+'一二三'[s-1]+'面',
+          note: it.note||'',
+          link: st.assessLink||'',
+        });
+      }
+    });
+  }
+
+  // 2) 邮件识别的面试事件（type 含 interview 或 subject/正文含「面试/约面」）
+  const mev = window.MAIL_EVENTS && window.MAIL_EVENTS.events ? window.MAIL_EVENTS.events : [];
+  mev.forEach(ev=>{
+    const isItv = (ev.type||'').toLowerCase().indexOf('interview')>=0 ||
+                  (ev.type||'').toLowerCase().indexOf('面')>=0 ||
+                  /(面试|约面|面谈|终面)/.test((ev.subject||'')+(ev.body_excerpt||''));
+    if(!isItv) return;
+    const ds = (ev.date||'').trim();
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(ds)) return;
+    const d = new Date(ds+'T'+(ev.time||'09:00')+':00');
+    if(isNaN(d.getTime())) return;
+    items.push({
+      name: ev.companyGuess||ev.from||'未知公司',
+      dt: d,
+      dateStr: ds,
+      timeStr: ev.time||'--:--',
+      src: 'mail',
+      stage: '邮件',
+      note: '',
+      link: ev.link||'',
+    });
+  });
+
+  // 排序：按时间升序（最近的在前）
+  items.sort((a,b)=>a.dt-b.dt);
+  if(cnt) cnt.textContent=items.length;
+  if(!items.length){
+    list.innerHTML='<div style="background:var(--card);border:1px dashed var(--border);border-radius:12px;padding:22px;text-align:center;color:var(--gray);font-size:13px">暂无面试安排 🎉<br><span style="font-size:11.5px">在「已投递追踪」里点击一面/二面/三面填写面试时间，或邮件识别到面试邀请后，这里会自动提醒</span></div>';
+    return;
+  }
+  list.innerHTML=items.map(it=>{
+    const ds=it.dateStr;
+    const cls = ds<today?'overdue':ds===today?'today':ds===tomorrow?'tomorrow':'';
+    const days = ds<today ? `已过 ${Math.round((new Date(today)-new Date(ds))/86400000)} 天`
+              : ds===today ? '🔥 今天'
+              : ds===tomorrow ? '明天'
+              : `还有 ${Math.round((new Date(ds)-new Date(today))/86400000)} 天`;
+    const daysCls = ds<today?'overdue':ds===today?'today':ds===tomorrow?'tomorrow':'';
+    return `<div class="itv-remind-card ${cls}">
+      <div class="irc-top">
+        <span class="irc-name" title="${esc(it.name)}">${esc(it.name)}</span>
+        <span class="irc-time">${esc(ds)} ${esc(it.timeStr)}</span>
+      </div>
+      <div class="irc-meta">
+        <span class="irc-src ${it.src==='mail'?'mail':''}">${it.src==='mail'?'📮 邮件':'📋 已投递'} · ${esc(it.stage)}</span>
+        <span class="irc-days ${daysCls}">${days}</span>
+      </div>
+      ${it.note?`<div class="irc-meta">📝 ${esc(it.note)}</div>`:''}
+      ${it.link?`<div class="irc-link"><a href="${esc(it.link)}" target="_blank" rel="noopener">🔗 相关链接</a></div>`:''}
+    </div>`;
+  }).join('');
+}
+
 /* ===== 测评提醒卡片：修改截止日期 ===== */
 function openReminderDlEdit(rid){
   document.querySelectorAll('.rc-dl-edit.show').forEach(el=>el.classList.remove('show'));
@@ -1230,7 +1343,17 @@ function renderAllData(){
   renderD5();
   refreshStats();
   renderReminder();
+  renderInterview();
   applyFilters();
+}
+
+/* ===== 手动刷新数据（更新时间戳，无新公司也更新） ===== */
+function manualRefresh(){
+  const btn=document.querySelector('.header-btn.ghost');
+  reloadData(()=>{
+    renderAllData();
+    toast('✅ 数据已刷新（'+new Date().toLocaleTimeString('zh-CN',{hour12:false})+'）');
+  });
 }
 
 function startAutoRefresh(){
@@ -1255,7 +1378,9 @@ document.addEventListener('DOMContentLoaded',()=>{
     document.getElementById('tableBody').innerHTML='<tr><td colspan="6"><div class="empty"><div class="big">📭</div>还没有数据<br><br><button class="header-btn" onclick="window.location.reload()">刷新</button></div></td></tr>';
     return;
   }
-  document.getElementById('dataTime').textContent=`⏱ 数据更新：${DATA.generatedAt||'--'}（来源：${MAIN_TAB.title} ${MAIN_TAB.records.length} 家）`;
+  const _now=new Date();
+  const _ts=_now.getFullYear()+'-'+String(_now.getMonth()+1).padStart(2,'0')+'-'+String(_now.getDate()).padStart(2,'0')+' '+String(_now.getHours()).padStart(2,'0')+':'+String(_now.getMinutes()).padStart(2,'0')+':'+String(_now.getSeconds()).padStart(2,'0');
+  document.getElementById('dataTime').textContent=`⏱ 数据更新：${DATA.generatedAt||'--'} · 本次刷新 ${_ts}（来源：${MAIN_TAB.title} ${MAIN_TAB.records.length} 家）`;
   startAutoRefresh();
   const ub=document.getElementById('userBadge');
   if(ub && window.CURRENT_USER) ub.textContent=`👤 ${window.CURRENT_USER.username}`;
@@ -1264,6 +1389,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   renderD5();
   refreshStats();
   renderReminder();
+  renderInterview();
   renderDeepSeek();
   renderResume();
   applyFilters();
