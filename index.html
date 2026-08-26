@@ -523,9 +523,9 @@ footer{margin-top:30px;text-align:center;font-size:12px;color:var(--gray);line-h
 })();
 
 /* ============ 核心数据 ============ */
-const DATA = window.QIUZHAO_DATA || null;
-const MAIN_TAB = DATA ? (DATA.tabs.find(t=>t.tab==='tvVDZj') || DATA.tabs[0]) : null;
-const REFER_TAB = DATA ? (DATA.tabs.find(t=>t.tab==='tTNjGc') || null) : null;
+let DATA = window.QIUZHAO_DATA || null;
+let MAIN_TAB = DATA ? (DATA.tabs.find(t=>t.tab==='tvVDZj') || DATA.tabs[0]) : null;
+let REFER_TAB = DATA ? (DATA.tabs.find(t=>t.tab==='tTNjGc') || null) : null;
 
 const STORE_KEY = Auth.userKey('qiuzhao27_track_v1');
 let track = {};   // recordId -> {applied, assess, itv:{1:{time,note,done},2:...,3:...}, offer:'active'|'offered'|'rejected'}
@@ -1216,6 +1216,60 @@ function openGuide(){ document.getElementById('guideMask').classList.add('show')
 function closeGuide(){ document.getElementById('guideMask').classList.remove('show'); }
 document.getElementById('guideMask').addEventListener('click',e=>{ if(e.target.id==='guideMask') closeGuide(); });
 
+/* ============ 自动刷新（每30分钟重新加载数据） ============ */
+const AUTO_REFRESH_MIN = 30;
+let autoRefreshTimer = null;
+
+function reloadData(cb){
+  // 重新加载 data.js（带时间戳防缓存），更新全局数据并重渲染
+  const old = document.querySelector('script[src^="data.js"]');
+  if(old) old.remove();
+  const s = document.createElement('script');
+  s.src = 'data.js?t=' + Date.now();
+  s.onload = ()=>{
+    const newData = window.QIUZHAO_DATA;
+    if(newData){
+      DATA = newData;
+      MAIN_TAB = newData.tabs.find(t=>t.tab==='tvVDZj') || newData.tabs[0] || null;
+      REFER_TAB = newData.tabs.find(t=>t.tab==='tTNjGc') || null;
+    }
+    if(cb) cb();
+  };
+  s.onerror = ()=>{ if(cb) cb(); };
+  document.body.appendChild(s);
+}
+
+function renderAllData(){
+  // 数据更新后重渲染全部模块
+  const dt = document.getElementById('dataTime');
+  if(dt && DATA) dt.textContent = `⏱ 数据更新：${DATA.generatedAt||'--'}（来源：${MAIN_TAB?MAIN_TAB.title:''} ${MAIN_TAB?MAIN_TAB.records.length:0} 家）`;
+  renderNew();
+  renderD5();
+  refreshStats();
+  renderReminder();
+  applyFilters();
+}
+
+function startAutoRefresh(){
+  if(autoRefreshTimer) return;
+  let seconds = AUTO_REFRESH_MIN * 60;
+  autoRefreshTimer = setInterval(()=>{
+    seconds--;
+    const el = document.getElementById('autoRefreshHint');
+    if(el){
+      const m = Math.floor(seconds/60), s = seconds%60;
+      el.textContent = `⏱ 数据每 ${AUTO_REFRESH_MIN} 分钟自动刷新 · 下次 ${m}分${s}秒`;
+    }
+    if(seconds <= 0){
+      seconds = AUTO_REFRESH_MIN * 60;
+      reloadData(()=>{
+        renderAllData();
+        try{ toast('🔄 数据已自动刷新'); }catch(e){}
+      });
+    }
+  }, 1000);
+}
+
 /* ============ 初始化 ============ */
 document.addEventListener('DOMContentLoaded',()=>{
   if(!DATA||!MAIN_TAB){
@@ -1224,6 +1278,11 @@ document.addEventListener('DOMContentLoaded',()=>{
     return;
   }
   document.getElementById('dataTime').textContent=`⏱ 数据更新：${DATA.generatedAt||'--'}（来源：${MAIN_TAB.title} ${MAIN_TAB.records.length} 家）`;
+  const dth=document.createElement('span');
+  dth.id='autoRefreshHint';
+  dth.style.cssText='font-size:11px;color:var(--gray);margin-left:10px';
+  document.getElementById('dataTime').after(dth);
+  startAutoRefresh();
   const ub=document.getElementById('userBadge');
   if(ub && window.CURRENT_USER) ub.textContent=`👤 ${window.CURRENT_USER.username}`;
   collectFilters();
