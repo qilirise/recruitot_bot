@@ -5,6 +5,7 @@ on:
   schedule:
     - cron: '*/30 * * * *'
   workflow_dispatch: {}  # 支持手动触发
+  push:                  # 临时：用于手动激活一次（验证后移除）
 
 permissions:
   contents: write
