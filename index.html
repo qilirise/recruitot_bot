@@ -386,13 +386,13 @@ footer{margin-top:30px;text-align:center;font-size:12px;color:var(--gray);line-h
       </div>
       <div class="side-cards">
         <div class="resume-side">
-          <a class="resume-card" href="https://rxresu.me/dashboard/resumes" target="_blank" rel="noopener">
+          <div class="resume-card" id="resumeCard" style="display:flex;flex-direction:column">
             <div class="rs-head">📄 我的简历</div>
-            <div class="rs-domain">rxresu.me 在线简历编辑器</div>
-            <div class="rs-desc">用 Reactive Resume 创建 / 更新你的秋招简历，导出 PDF 随时投递</div>
-            <div class="rs-tip">💡 投递前记得更新简历 · 测评/面试后用新版本</div>
-            <div class="rs-btn">打开简历编辑器 →</div>
-          </a>
+            <div class="rs-domain" id="rsDomain">rxresu.me 在线简历编辑器</div>
+            <div class="rs-desc" id="rsDesc">用 Reactive Resume 创建 / 更新你的秋招简历，导出 PDF 随时投递</div>
+            <div class="rs-tip" id="rsTip">💡 投递前记得更新简历 · 测评/面试后用新版本</div>
+            <div class="rs-btn" id="rsBtn">打开简历编辑器 →</div>
+          </div>
         </div>
         <div class="ds-side">
           <div class="ds-card" id="dsCard">
@@ -531,10 +531,19 @@ const STORE_KEY = Auth.userKey('qiuzhao27_track_v1');
 let track = {};   // recordId -> {applied, assess, itv:{1:{time,note,done},2:...,3:...}, offer:'active'|'offered'|'rejected'}
 try{ track = JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }catch(e){ track = {}; }
 
-/* 书签导入：把 Edge「找工作!/官网」中匹配到的公司标记为已投递（不覆盖用户手动取消的） */
+/* 书签导入：把 Edge「找工作!/官网」中匹配到的公司标记为已投递（不覆盖用户手动取消的）
+   仅「主用户」（第一个注册的账户）执行——新注册账户保持空白，从零开始 */
 (function importAppliedSites(){
   const sites = window.APPLIED_SITES;
   if(!sites || !Array.isArray(sites.applied) || !sites.applied.length) return;
+  // 主用户判定：第一个注册的用户（users[0]）
+  const users = window.Auth ? Auth.getUsers() : [];
+  const cur = window.Auth ? Auth.currentUser() : null;
+  if(!cur || !users.length) return;
+  if(users[0].uid !== cur.uid){
+    // 非主用户：不导入书签（新账户从新网站开始）
+    return;
+  }
   const existedIds = new Set(Object.keys(track)); // ids already in localStorage (user-set)
   let imported = 0;
   sites.applied.forEach(s=>{
@@ -1094,10 +1103,17 @@ function refreshStats(){
   }
 }
 
-/* ===== DeepSeek API 用量 ===== */
+/* ===== DeepSeek API 用量（仅主账户显示） ===== */
 function renderDeepSeek(){
   const body=document.getElementById('dsBody');
   if(!body) return;
+  // 主用户判定：第一个注册的用户
+  const users = window.Auth ? Auth.getUsers() : [];
+  const cur = window.Auth ? Auth.currentUser() : null;
+  if(!cur || !users.length || users[0].uid !== cur.uid){
+    body.innerHTML=`<div class="ds-empty">🔒 该模块仅主账户可用<br>新账户请<a href="https://platform.deepseek.com" target="_blank" rel="noopener" style="color:var(--amber)">前往 DeepSeek 平台</a>自行查询用量</div>`;
+    return;
+  }
   const d=window.DEEPSEEK_USAGE || {configured:false};
   if(!d.configured){
     body.innerHTML=`<div class="ds-empty">未配置 API Key<br><b>🔑 去 platform.deepseek.com/api_keys 创建</b>，填入 <code>deepseek_config.json</code> 并设置 <code>enabled=true</code>，然后运行「更新数据.bat」</div>`;
@@ -1161,7 +1177,36 @@ function refreshDeepSeek(){
     });
 }
 
-/* ============ 模态框 ============ */
+/* ===== 简历入口（仅主账户显示链接，新账户引导） ===== */
+function renderResume(){
+  const card = document.getElementById('resumeCard');
+  if(!card) return;
+  const users = window.Auth ? Auth.getUsers() : [];
+  const cur = window.Auth ? Auth.currentUser() : null;
+  const isMain = !!(cur && users.length && users[0].uid === cur.uid);
+  const dom = document.getElementById('rsDomain');
+  const desc = document.getElementById('rsDesc');
+  const tip = document.getElementById('rsTip');
+  const btn = document.getElementById('rsBtn');
+  if(isMain){
+    card.style.cursor = 'pointer';
+    card.onclick = ()=>window.open('https://rxresu.me/dashboard/resumes','_blank');
+    if(dom) dom.textContent = 'rxresu.me 在线简历编辑器';
+    if(desc) desc.textContent = '用 Reactive Resume 创建 / 更新你的秋招简历，导出 PDF 随时投递';
+    if(tip) tip.textContent = '💡 投递前记得更新简历 · 测评/面试后用新版本';
+    if(btn) btn.textContent = '打开简历编辑器 →';
+  } else {
+    card.style.cursor = 'default';
+    card.onclick = null;
+    if(dom) dom.textContent = '🔒 仅主账户可用';
+    if(desc) desc.textContent = '新账户简历由你自行管理，可用任意在线简历工具（如 rxresu.me）制作';
+    if(tip) tip.textContent = '💡 注册后可用自己的简历工具制作并投递';
+    if(btn) btn.textContent = '前往 rxresu.me →';
+    btn.onclick = ()=>window.open('https://rxresu.me/dashboard/resumes','_blank');
+  }
+}
+
+/* ===== 模态框 ===== */
 function doLogout(){
   Auth.logout();
   toast('已退出登录');
@@ -1187,6 +1232,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   refreshStats();
   renderReminder();
   renderDeepSeek();
+  renderResume();
   applyFilters();
   document.getElementById('searchInput').addEventListener('input',applyFilters);
   document.getElementById('filterDate').addEventListener('change',applyFilters);

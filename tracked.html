@@ -222,10 +222,19 @@ const STORE_KEY = Auth.userKey('qiuzhao27_track_v1');
 let track = {};
 try{ track = JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }catch(e){ track = {}; }
 
-/* 书签导入：把 Edge「找工作!/官网」中匹配到的公司标记为已投递（不覆盖用户手动取消的） */
+/* 书签导入：把 Edge「找工作!/官网」中匹配到的公司标记为已投递（不覆盖用户手动取消的）
+   仅「主用户」（第一个注册的账户）执行——新注册账户保持空白，从零开始 */
 (function importAppliedSites(){
   const sites = window.APPLIED_SITES;
   if(!sites || !Array.isArray(sites.applied) || !sites.applied.length) return;
+  // 主用户判定：第一个注册的用户（users[0]）
+  const users = window.Auth ? Auth.getUsers() : [];
+  const cur = window.Auth ? Auth.currentUser() : null;
+  if(!cur || !users.length) return;
+  if(users[0].uid !== cur.uid){
+    // 非主用户：不导入书签（新账户从新网站开始）
+    return;
+  }
   const existedIds = new Set(Object.keys(track)); // ids already in localStorage (user-set)
   let imported = 0;
   sites.applied.forEach(s=>{
