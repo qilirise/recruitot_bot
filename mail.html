@@ -123,8 +123,9 @@ footer{margin-top:30px;text-align:center;font-size:12px;color:var(--gray);line-h
     <div class="header-row">
       <span class="badge" id="configBadge">⚙️ 状态：未配置</span>
       <span class="badge" id="lastCheckBadge">⏱ 上次检查：--</span>
+      <span class="badge" id="refreshTimeBadge">🕐 本次刷新：--</span>
       <a class="header-btn ghost" href="index.html">← 返回首页</a>
-      <button class="header-btn ghost" onclick="window.location.reload()">🔄 刷新</button>
+      <button class="header-btn ghost" onclick="refreshMailData()">🔄 刷新邮件</button>
       <span class="badge" id="userBadge">👤 --</span>
       <button class="header-btn ghost" onclick="doLogout()">🚪 退出</button>
     </div>
@@ -273,6 +274,32 @@ function applyEvent(ev){
   }
   saveTrack();
   return true;
+}
+
+/* ===== 刷新邮件数据：重新加载 mail_events.js（云端每30分钟自动更新）+ 重新应用安排 ===== */
+function refreshMailData(){
+  const btn=document.querySelector('.header-btn.ghost[onclick*="refreshMailData"]');
+  if(btn){ btn.disabled=true; btn.textContent='刷新中…'; }
+  const old=document.querySelector('script[src^="mail_events.js"]');
+  if(old) old.remove();
+  const s=document.createElement('script');
+  s.src='mail_events.js?t='+Date.now();
+  s.onload=()=>{
+    // 更新「本次刷新」时间戳（单独设置，与云端检查时间分开）
+    const now=new Date();
+    const ts=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0')+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0')+':'+String(now.getSeconds()).padStart(2,'0');
+    const el=document.getElementById('refreshTimeBadge');
+    if(el) el.textContent='🕐 本次刷新：'+ts;
+    // 重新渲染 + 重新应用邮件安排
+    renderEvents();
+    toast('✅ 邮件数据已刷新');
+    if(btn){ btn.disabled=false; btn.textContent='🔄 刷新邮件'; }
+  };
+  s.onerror=()=>{
+    toast('❌ 加载失败（云端邮件数据尚未生成）');
+    if(btn){ btn.disabled=false; btn.textContent='🔄 刷新邮件'; }
+  };
+  document.body.appendChild(s);
 }
 
 function renderEvents(){

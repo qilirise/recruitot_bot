@@ -181,7 +181,8 @@ header .sub{margin-top:6px;font-size:13px;opacity:.92}
 .rc-edit-btn:hover{background:var(--primary);color:#fff}
 .rc-dl-edit{margin-top:6px;display:none;gap:6px;align-items:center;background:#fffdf5;border:1px dashed var(--amber);border-radius:8px;padding:6px 8px}
 .rc-dl-edit.show{display:flex}
-.rc-dl-edit input[type=date]{border:1px solid var(--border);border-radius:6px;padding:4px 7px;font-size:12px;outline:none}
+.rc-dl-edit input[type=date],.rc-dl-edit input[type=url]{border:1px solid var(--border);border-radius:6px;padding:4px 7px;font-size:12px;outline:none}
+.rc-dl-edit input[type=url]{flex:1;min-width:120px}
 .rc-dl-edit input:focus{border-color:var(--amber)}
 .rc-dl-edit button{border:none;border-radius:6px;padding:4px 10px;font-size:11.5px;cursor:pointer;font-weight:700}
 .rc-dl-edit .ok{background:var(--amber);color:#fff}
@@ -390,6 +391,7 @@ footer{margin-top:30px;text-align:center;font-size:12px;color:var(--gray);line-h
       <span class="badge" id="newCountBadge">🆕 今日新开：--</span>
       <span class="badge" id="dataTime">⏱ 数据更新：--</span>
       <button class="header-btn ghost" onclick="manualRefresh()">🔄 刷新数据</button>
+      <button class="header-btn" onclick="openDsModal()" title="查看 DeepSeek API 余额用量">🤖 DeepSeek 用量</button>
       <a class="header-btn" href="mail.html" style="text-decoration:none">📧 邮件识别中心</a>
       <button class="header-btn" onclick="openGuide()">📖 使用说明</button>
       <span class="badge" id="userBadge">👤 --</span>
@@ -426,16 +428,6 @@ footer{margin-top:30px;text-align:center;font-size:12px;color:var(--gray);line-h
             <div class="rs-desc" id="rsDesc">用 Reactive Resume 创建 / 更新你的秋招简历，导出 PDF 随时投递</div>
             <div class="rs-tip" id="rsTip">💡 投递前记得更新简历 · 测评/面试后用新版本</div>
             <div class="rs-btn" id="rsBtn">打开简历编辑器 →</div>
-          </div>
-        </div>
-        <div class="ds-side">
-          <div class="ds-card" id="dsCard">
-            <div class="ds-head">🤖 DeepSeek API 用量
-              <button class="ds-refresh" id="dsRefreshBtn" onclick="refreshDeepSeek()" title="点击重新抓取余额">🔄 刷新</button>
-            </div>
-            <div class="ds-sub">api.deepseek.com 余额监控</div>
-            <div class="ds-body" id="dsBody">加载中…</div>
-            <a class="ds-link" href="https://platform.deepseek.com/usage" target="_blank" rel="noopener">打开 DeepSeek 平台 →</a>
           </div>
         </div>
         <div class="tracked-side">
@@ -506,6 +498,29 @@ footer{margin-top:30px;text-align:center;font-size:12px;color:var(--gray);line-h
 </div>
 
 <div id="toast"></div>
+
+<!-- DeepSeek 用量模态框（从侧边卡片改为弹窗按钮） -->
+<div class="modal-mask" id="dsModal">
+  <div class="modal" style="max-width:420px">
+    <div class="ds-card" id="dsCard" style="box-shadow:none">
+      <div class="ds-head">🤖 DeepSeek API 用量
+        <button class="ds-refresh" id="dsRefreshBtn" onclick="refreshDeepSeek()" title="重新加载云端最新余额">🔄 刷新</button>
+      </div>
+      <div class="ds-sub">api.deepseek.com 余额监控 · 云端每30分钟自动更新</div>
+      <div class="ds-body" id="dsBody">加载中…</div>
+      <a class="ds-link" href="https://platform.deepseek.com/usage" target="_blank" rel="noopener">打开 DeepSeek 平台 →</a>
+    </div>
+    <div class="btns" style="margin-top:14px;justify-content:flex-end">
+      <button class="no" onclick="closeDsModal()">关闭</button>
+    </div>
+  </div>
+</div>
+<script>
+function openDsModal(){ document.getElementById('dsModal').classList.add('show'); renderDeepSeek(); }
+function closeDsModal(){ document.getElementById('dsModal').classList.remove('show'); }
+document.getElementById('dsModal').addEventListener('click',e=>{ if(e.target.id==='dsModal') closeDsModal(); });
+</script>
+
 
 <div class="modal-mask" id="guideMask">
   <div class="modal">
@@ -717,12 +732,13 @@ function renderReminder(){
     return `<div class="reminder-card ${cls}">
       <div class="rc-top"><span class="rc-name">${esc(v['公司名称']||'')}</span><span class="rc-status ${cls}">${status}</span></div>
       <div class="rc-link">${link?`<a href="${esc(link)}" target="_blank" rel="noopener">🔗 点击前往测评 →</a>`:'<span style="color:#94a3b8">未填测评链接</span>'}</div>
-      <div class="rc-meta"><span class="dl ${overdue?'overdue':dueToday?'today':''}">⏰ 截止：${esc(dl)||'—'}</span><button class="rc-edit-btn" onclick="openReminderDlEdit('${r.id}')">✏️ 修改</button> · ${remain} · 🎯 ${esc(v['招聘岗位']||'')?esc(v['招聘岗位']).slice(0,30):''}</div>
+      <div class="rc-meta"><span class="dl ${overdue?'overdue':dueToday?'today':''}">⏰ 截止：${esc(dl)||'—'}</span><button class="rc-edit-btn" onclick="openReminderDlEdit('${r.id}')">✏️ 编辑</button> · ${remain} · 🎯 ${esc(v['招聘岗位']||'')?esc(v['招聘岗位']).slice(0,30):''}</div>
       <div class="rc-btns">
         <button class="rc-done" onclick="doneAssess('${r.id}')" title="标记测评已完成">✅ 完成</button>
         <button class="rc-del" onclick="delAssess('${r.id}')" title="删除该公司的测评信息">🗑️ 删除</button>
       </div>
       <div class="rc-dl-edit" id="rcDlEdit_${r.id}">
+        <input type="url" id="rcDlLink_${r.id}" value="${esc(link)}" placeholder="粘贴测评链接（https://…）">
         <input type="date" id="rcDlDate_${r.id}" value="${esc(dl)}">
         <button class="ok" onclick="saveReminderDl('${r.id}')">保存</button>
         <button class="no" onclick="cancelReminderDl('${r.id}')">取消</button>
@@ -880,15 +896,18 @@ function cancelReminderDl(rid){
   if(box) box.classList.remove('show');
 }
 function saveReminderDl(rid){
+  const linkInp=document.getElementById('rcDlLink_'+rid);
   const inp=document.getElementById('rcDlDate_'+rid);
   if(!inp) return;
   const dl=inp.value;
   if(!dl){ toast('请选择日期'); return; }
   const st=getRec(rid);
+  const link=(linkInp?linkInp.value:'').trim();
+  if(link) st.assessLink=link; else if(!st.assessLink) st.assessLink='';
   st.assessDeadline=dl;
   saveTrack();
   renderReminder();
-  toast('✅ 测评截止日期已更新：'+dl);
+  toast('✅ 测评信息已更新');
 }
 function toggleOffer(rid,btn){
   const st=getRec(rid); const seq=['active','offered','rejected'];
