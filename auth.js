@@ -42,8 +42,10 @@
     const user = {uid, username, passHash: hashPwd(username, password), createdAt: new Date().toLocaleString('zh-CN',{hour12:false})};
     users.push(user);
     saveUsers(users);
-    // 首次注册：迁移旧版无用户数据到新账户（避免丢失已有投递信息）
-    migrateLegacy(uid);
+    // 仅当这是「第一个用户」时才迁移旧版无用户数据（避免后续账号继承他人数据）
+    if(users.length === 1){
+      migrateLegacy(uid);
+    }
     setSession(user);
     return {ok:true, user};
   }
@@ -80,7 +82,7 @@
     return u ? (base + '_' + u.uid) : base;
   }
 
-  /* ---------- 旧数据迁移（首次注册时调用一次） ---------- */
+  /* ---------- 旧数据迁移（仅第一个用户注册时调用） ---------- */
   function migrateLegacy(uid){
     try{
       LEGACY_KEYS.forEach(base=>{
@@ -90,7 +92,8 @@
         if(localStorage.getItem(newKey) === null){
           localStorage.setItem(newKey, legacy);
         }
-        // 迁移后保留旧数据不删除（保险），下次登录新账户即可看到
+        // 迁移后删除旧 key：确保后续注册的账号不会再次继承旧数据（数据隔离关键）
+        try{ localStorage.removeItem(base); }catch(e){}
       });
     }catch(e){}
   }
