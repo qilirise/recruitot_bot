@@ -562,6 +562,14 @@ document.addEventListener('DOMContentLoaded', ()=>{
   const ub=document.getElementById('userBadge');
   if(ub && window.CURRENT_USER) ub.textContent=`👤 ${window.CURRENT_USER.username}`;
   renderEvents(); renderEntries();
+  // 云同步：登录后自动拉取云端数据（processed/entries 等）
+  if(window.Cloud && Cloud.status().bound){
+    Cloud.pull(true).then(()=>{
+      try{ processed = JSON.parse(localStorage.getItem(MAIL_KEY)) || {}; }catch(e){ processed={}; }
+      try{ entries = JSON.parse(localStorage.getItem(ENTRY_KEY)) || []; }catch(e){ entries=[]; }
+      renderEvents(); renderEntries();
+    });
+  }
 });
 </script>
 </body>

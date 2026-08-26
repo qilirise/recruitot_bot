@@ -508,6 +508,15 @@ function renderAll(){
 document.addEventListener('DOMContentLoaded',()=>{
   const ub=document.getElementById('userBadge');
   if(ub && window.CURRENT_USER) ub.textContent=`👤 ${window.CURRENT_USER.username}`;
+  // 云同步：登录后自动拉取云端数据
+  if(window.Cloud && Cloud.status().bound){
+    Cloud.pull(true).then(()=>{
+      try{ track = JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }catch(e){ track={}; }
+      try{ entries = JSON.parse(localStorage.getItem(ENTRY_KEY)) || []; }catch(e){ entries=[]; }
+      collectIndustries();
+      renderAll();
+    });
+  }
   collectIndustries();
   renderAll();
   document.getElementById('searchInput').addEventListener('input',renderAll);

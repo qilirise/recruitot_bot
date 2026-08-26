@@ -568,9 +568,17 @@ function cloudBind(){
     if(res.ok){
       document.getElementById('cloudTokenInput').value='';
       toast('✅ 云同步已绑定（'+res.user+'）');
+      // 绑定成功立即拉取云端数据（新设备绑定后马上同步）
+      return Cloud.pull(false).then(pr=>{
+        if(pr.ok){
+          reloadLocal();
+          toast('✅ 已同步云端数据到本机');
+        }
+      });
     } else {
       toast('❌ 绑定失败：'+res.msg);
     }
+  }).then(()=>{
     updateCloudStatus();
     if(btn){ btn.disabled=false; btn.textContent='🔗 绑定并同步'; }
   });

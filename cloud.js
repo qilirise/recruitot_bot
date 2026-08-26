@@ -10,17 +10,22 @@
  * 注意：PAT 只存浏览器本地，绝不写入代码/仓库/服务器
  * ============================================================ */
 (function(){
-  const CFG_PREFIX = 'qiuzhao27_cloud_';   // qiuzhao27_cloud_<uid> = {token, gistId, lastSync}
+  /* 注意：云同步隔离键用「用户名」而非 uid！
+     uid 每次注册随机生成（跨设备同一账号 uid 不同），
+     用 uid 会导致跨设备无法找到同一份 Gist -> 同步失效。
+     用户名在同一账号的所有设备上一致，是唯一可靠的关联键。 */
+  const CFG_PREFIX = 'qiuzhao27_cloud_';   // qiuzhao27_cloud_<username> = {token, gistId, lastSync}
   const DATA_KEY = 'data.json';
   let _timer = null;
 
-  /* ---------- 配置存取 ---------- */
-  function cfgKey(){ return CFG_PREFIX + (window.CURRENT_USER ? CURRENT_USER.uid : 'anon'); }
+  /* ---------- 配置存取（按用户名隔离） ---------- */
+  function userName(){ return (window.CURRENT_USER && CURRENT_USER.username) ? CURRENT_USER.username : 'anon'; }
+  function cfgKey(){ return CFG_PREFIX + userName(); }
   function getCfg(){ try{ return JSON.parse(localStorage.getItem(cfgKey())) || null; }catch(e){ return null; } }
   function setCfg(c){ try{ localStorage.setItem(cfgKey(), JSON.stringify(c)); }catch(e){} }
 
   /* ---------- 打包 / 解包账号数据 ---------- */
-  // 收集当前账号在 localStorage 中的全部数据 key（按 uid 隔离）
+  // 收集当前账号在 localStorage 中的全部数据 key（按 uid 隔离，内容为逻辑键）
   function collectData(){
     const uid = window.CURRENT_USER ? CURRENT_USER.uid : 'anon';
     const keys = ['qiuzhao27_track_v1','qiuzhao27_entries_v1','qiuzhao27_mail_processed_v1','qiuzhao27_hided_v1'];
@@ -31,10 +36,11 @@
       if(v !== null) out[base] = v;
     });
     out['_uid'] = uid;
+    out['_user'] = userName();
     out['_ts'] = Date.now();
     return out;
   }
-  // 把云端数据写回 localStorage（仅写入已存在的 key；保留本地已有数据用 merge=true）
+  // 把云端数据写回 localStorage（写入「当前设备」的 uid 下，实现跨设备迁移）
   function applyData(data, merge){
     if(!data || typeof data !== 'object') return;
     const uid = window.CURRENT_USER ? CURRENT_USER.uid : 'anon';
@@ -70,23 +76,23 @@
     });
   }
 
-  /* ---------- 绑定：验证 token 并创建/复用私有 gist ---------- */
+  /* ---------- 绑定：验证 token 并创建/复用私有 gist（按用户名关联） ---------- */
   async function bind(token){
     token = (token||'').trim();
     if(!token) return {ok:false, msg:'请填写 GitHub PAT'};
-    const uid = window.CURRENT_USER ? CURRENT_USER.uid : 'anon';
+    const uname = userName();
     try{
       // 1) 验证 token
       const user = await api('https://api.github.com/user', {method:'GET'}, token);
-      // 2) 查询该账号已绑定的 gist（按描述前缀查找）
+      // 2) 查询该账号已绑定的 gist（按描述 qiuzhao27-<用户名> 查找——跨设备用同一用户名即找到同一份）
       const gists = await api('https://api.github.com/gists?per_page=100', {method:'GET'}, token);
-      let gist = (gists||[]).find(g=>g.description === ('qiuzhao27-' + uid));
+      let gist = (gists||[]).find(g=>g.description === ('qiuzhao27-' + uname));
       // 3) 不存在则创建私有 gist
       if(!gist){
         gist = await api('https://api.github.com/gists', {
           method:'POST',
           body: JSON.stringify({
-            description: 'qiuzhao27-' + uid,
+            description: 'qiuzhao27-' + uname,
             public: false,
             files: { [DATA_KEY]: { content: JSON.stringify(collectData()) } }
           })
