@@ -153,6 +153,11 @@ header .sub{margin-top:6px;font-size:13px;opacity:.92}
 .itv-remind-card .irc-days.tomorrow{color:#3b82f6}
 .itv-remind-card .irc-days.overdue{color:#ef4444}
 .itv-remind-card .irc-link{font-size:11.5px;margin-top:4px}
+.itv-remind-card .irc-btns{display:flex;gap:8px;margin-top:8px}
+.irc-done{background:#22c55e;color:#fff;border:none;border-radius:7px;padding:3px 12px;font-size:11.5px;cursor:pointer;font-weight:600}
+.irc-done:hover{background:#16a34a}
+.irc-del{background:#ef4444;color:#fff;border:none;border-radius:7px;padding:3px 12px;font-size:11.5px;cursor:pointer;font-weight:600}
+.irc-del:hover{background:#dc2626}
 @media(max-width:1200px){.interview-side{width:100%;min-width:0}}
 .reminder-card{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--amber);border-radius:var(--radius);padding:13px 16px;box-shadow:var(--shadow);transition:.15s}
 .reminder-card:hover{transform:translateY(-2px)}
@@ -181,6 +186,11 @@ header .sub{margin-top:6px;font-size:13px;opacity:.92}
 .rc-dl-edit button{border:none;border-radius:6px;padding:4px 10px;font-size:11.5px;cursor:pointer;font-weight:700}
 .rc-dl-edit .ok{background:var(--amber);color:#fff}
 .rc-dl-edit .no{background:#f1f5f9;color:var(--gray)}
+.rc-btns{display:flex;gap:8px;margin-top:8px}
+.rc-done{background:#22c55e;color:#fff;border:none;border-radius:7px;padding:3px 12px;font-size:11.5px;cursor:pointer;font-weight:600}
+.rc-done:hover{background:#16a34a}
+.rc-del{background:#ef4444;color:#fff;border:none;border-radius:7px;padding:3px 12px;font-size:11.5px;cursor:pointer;font-weight:600}
+.rc-del:hover{background:#dc2626}
 
 /* ===== section ===== */
 .section{margin-top:20px}
@@ -739,6 +749,10 @@ function renderReminder(){
       <div class="rc-top"><span class="rc-name">${esc(v['公司名称']||'')}</span><span class="rc-status ${cls}">${status}</span></div>
       <div class="rc-link">${link?`<a href="${esc(link)}" target="_blank" rel="noopener">🔗 点击前往测评 →</a>`:'<span style="color:#94a3b8">未填测评链接</span>'}</div>
       <div class="rc-meta"><span class="dl ${overdue?'overdue':dueToday?'today':''}">⏰ 截止：${esc(dl)||'—'}</span><button class="rc-edit-btn" onclick="openReminderDlEdit('${r.id}')">✏️ 修改</button> · ${remain} · 🎯 ${esc(v['招聘岗位']||'')?esc(v['招聘岗位']).slice(0,30):''}</div>
+      <div class="rc-btns">
+        <button class="rc-done" onclick="doneAssess('${r.id}')" title="标记测评已完成">✅ 完成</button>
+        <button class="rc-del" onclick="delAssess('${r.id}')" title="删除该公司的测评信息">🗑️ 删除</button>
+      </div>
       <div class="rc-dl-edit" id="rcDlEdit_${r.id}">
         <input type="date" id="rcDlDate_${r.id}" value="${esc(dl)}">
         <button class="ok" onclick="saveReminderDl('${r.id}')">保存</button>
@@ -770,12 +784,14 @@ function renderInterview(){
         if(isNaN(d.getTime())) continue;
         if(it.done) continue;                       // 已完成的面不提醒
         items.push({
+          rid: rid,
+          stage: s,
           name: customName,
           dt: d,
           dateStr: d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'),
           timeStr: String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'),
           src: 'track',
-          stage: '第'+'一二三'[s-1]+'面',
+          stageName: '第'+'一二三'[s-1]+'面',
           note: it.note||'',
           link: st.assessLink||'',
         });
@@ -800,7 +816,7 @@ function renderInterview(){
       dateStr: ds,
       timeStr: ev.time||'--:--',
       src: 'mail',
-      stage: '邮件',
+      stageName: '邮件',
       note: '',
       link: ev.link||'',
     });
@@ -827,13 +843,61 @@ function renderInterview(){
         <span class="irc-time">${esc(ds)} ${esc(it.timeStr)}</span>
       </div>
       <div class="irc-meta">
-        <span class="irc-src ${it.src==='mail'?'mail':''}">${it.src==='mail'?'📮 邮件':'📋 已投递'} · ${esc(it.stage)}</span>
+        <span class="irc-src ${it.src==='mail'?'mail':''}">${it.src==='mail'?'📮 邮件':'📋 已投递'} · ${esc(it.stageName)}</span>
         <span class="irc-days ${daysCls}">${days}</span>
       </div>
       ${it.note?`<div class="irc-meta">📝 ${esc(it.note)}</div>`:''}
       ${it.link?`<div class="irc-link"><a href="${esc(it.link)}" target="_blank" rel="noopener">🔗 相关链接</a></div>`:''}
+      ${it.src==='track'?`<div class="irc-btns">
+        <button class="irc-done" onclick="doneItv('${it.rid}',${it.stage})" title="标记该轮面试完成">✅ 完成</button>
+        <button class="irc-del" onclick="delItv('${it.rid}',${it.stage})" title="删除该轮面试安排">🗑️ 删除</button>
+      </div>`:''}
     </div>`;
   }).join('');
+}
+
+/* ===== 测评：完成 / 删除 ===== */
+function doneAssess(rid){
+  const st=getRec(rid);
+  st.assess=true;
+  saveTrack();
+  renderReminder();
+  renderInterview();
+  reRenderRow(rid);
+  toast('✅ 已标记测评完成');
+}
+function delAssess(rid){
+  const st=getRec(rid);
+  delete st.assessLink; delete st.assessDeadline;
+  if(st.assess) st.assess=false;
+  saveTrack();
+  renderReminder();
+  renderInterview();
+  reRenderRow(rid);
+  toast('🗑️ 测评信息已删除');
+}
+
+/* ===== 面试：完成 / 删除 ===== */
+function doneItv(rid,stage){
+  const st=getRec(rid);
+  if(!st.itv) st.itv={};
+  if(!st.itv[stage]) st.itv[stage]={time:'',note:'',done:false};
+  st.itv[stage].done=true;
+  saveTrack();
+  renderReminder();
+  renderInterview();
+  toast('✅ 已标记该轮面试完成');
+}
+function delItv(rid,stage){
+  const st=getRec(rid);
+  if(st.itv && st.itv[stage]){
+    delete st.itv[stage].time;
+    delete st.itv[stage].note;
+    delete st.itv[stage].done;
+  }
+  saveTrack();
+  renderInterview();
+  toast('🗑️ 该轮面试已删除');
 }
 
 /* ===== 测评提醒卡片：修改截止日期 ===== */
