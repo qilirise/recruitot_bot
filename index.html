@@ -215,6 +215,10 @@ header .sub{margin-top:6px;font-size:13px;opacity:.92}
 .d5-item:last-child{border-bottom:none}
 .d5-item:hover{background:#f8faff}
 .d5-item .r1{display:flex;align-items:center;gap:6px}
+.d5-hide{margin-left:auto;background:transparent;border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;padding:1px 6px;opacity:.55}
+.d5-hide:hover{opacity:1;border-color:var(--red);background:#fff5f5}
+.mini-btn.no{background:#f1f5f9;color:var(--gray);font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:7px;cursor:pointer}
+.mini-btn.no:hover{background:#fff5f5;border-color:var(--red);color:var(--red)}
 .d5-item .nm{font-size:13px;font-weight:700;color:var(--text)}
 .d5-item .dt{font-size:10.5px;color:var(--primary);background:var(--primary-light);padding:1px 7px;border-radius:8px;font-weight:600;margin-left:auto;white-space:nowrap}
 .d5-item .pos{font-size:11.5px;color:var(--gray);line-height:1.5;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
@@ -392,6 +396,7 @@ footer{margin-top:30px;text-align:center;font-size:12px;color:var(--gray);line-h
       <span class="badge" id="dataTime">⏱ 数据更新：--</span>
       <button class="header-btn ghost" onclick="manualRefresh()">🔄 刷新数据</button>
       <button class="header-btn" onclick="openDsModal()" title="查看 DeepSeek API 余额用量">🤖 DeepSeek 用量</button>
+      <button class="header-btn ghost" onclick="openCloudModal()" title="跨设备同步数据到 GitHub Gist">☁️ 云同步</button>
       <a class="header-btn" href="mail.html" style="text-decoration:none">📧 邮件识别中心</a>
       <button class="header-btn" onclick="openGuide()">📖 使用说明</button>
       <span class="badge" id="userBadge">👤 --</span>
@@ -445,7 +450,7 @@ footer{margin-top:30px;text-align:center;font-size:12px;color:var(--gray);line-h
 
   <div class="section today-section">
     <div class="today-left">
-      <div class="section-title">🆕 今日新开秋招 <span class="tag" id="todayTag">NEW</span>
+      <div class="section-title" id="newTitle">🆕 今日新开秋招 <span class="tag" id="todayTag">NEW</span>
         <span class="hint">点击「去投递」直达官方链接，别忘了用内推码！</span>
       </div>
       <div class="new-grid" id="newGrid"></div>
@@ -521,6 +526,82 @@ function closeDsModal(){ document.getElementById('dsModal').classList.remove('sh
 document.getElementById('dsModal').addEventListener('click',e=>{ if(e.target.id==='dsModal') closeDsModal(); });
 </script>
 
+<!-- 云同步模态框（GitHub Gist 跨设备同步） -->
+<div class="modal-mask" id="cloudModal">
+  <div class="modal" style="max-width:440px">
+    <h3>☁️ 云同步（跨设备共享）</h3>
+    <div style="font-size:12.5px;color:var(--gray);line-height:1.8;margin-bottom:10px">
+      将当前账号的<b>全部数据</b>（投递/测评/面试/Offer/邮件处理/隐藏offer）存入一个<b>私有 GitHub Gist</b>，
+      同一账号在<b>任何设备</b>登录后即可同步共享。<br>
+      <span style="color:var(--amber)">需要你的 GitHub Token（仅需 <b>gist</b> 权限，存于本浏览器，不会上传到任何服务器）</span>
+    </div>
+    <div id="cloudStatus" style="font-size:12.5px;margin-bottom:10px;padding:8px 10px;background:#f1f5f9;border-radius:8px"></div>
+    <div class="row" style="margin-bottom:8px">
+      <input type="password" id="cloudTokenInput" placeholder="粘贴 GitHub PAT（仅 gist 权限）" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+    </div>
+    <div class="btns" style="justify-content:flex-end">
+      <button class="ok" onclick="cloudBind()">🔗 绑定并同步</button>
+      <button class="ok" style="background:#3b82f6" onclick="cloudPullNow()">⬇️ 拉取云端</button>
+      <button class="no" onclick="cloudUnbind()" style="background:#f1f5f9;color:var(--red)">解除</button>
+      <button class="no" onclick="closeCloudModal()">关闭</button>
+    </div>
+  </div>
+</div>
+<script>
+function openCloudModal(){
+  document.getElementById('cloudModal').classList.add('show');
+  updateCloudStatus();
+}
+function closeCloudModal(){ document.getElementById('cloudModal').classList.remove('show'); }
+function updateCloudStatus(){
+  const el=document.getElementById('cloudStatus');
+  const st = window.Cloud ? Cloud.status() : {bound:false};
+  el.innerHTML = st.bound
+    ? `✅ 已绑定：<b>${esc(st.user||'')}</b> · 上次同步 ${st.syncAt||'--'}`
+    : `⚠️ 未绑定云同步 — 数据仅存本机浏览器。绑定后可在其他设备登录同一账号共享。`;
+}
+function cloudBind(){
+  const token=document.getElementById('cloudTokenInput').value.trim();
+  const btn=document.querySelector('#cloudModal .btns .ok');
+  if(btn){ btn.disabled=true; btn.textContent='绑定中…'; }
+  Cloud.bind(token).then(res=>{
+    if(res.ok){
+      document.getElementById('cloudTokenInput').value='';
+      toast('✅ 云同步已绑定（'+res.user+'）');
+    } else {
+      toast('❌ 绑定失败：'+res.msg);
+    }
+    updateCloudStatus();
+    if(btn){ btn.disabled=false; btn.textContent='🔗 绑定并同步'; }
+  });
+}
+function cloudPullNow(){
+  Cloud.pull(false).then(res=>{
+    if(res.ok){
+      // 拉取后重新加载本地数据并重渲染
+      reloadLocal();
+      toast('✅ 已拉取云端数据并同步到本机');
+      updateCloudStatus();
+    } else {
+      toast('❌ 拉取失败：'+res.msg);
+    }
+  });
+}
+function cloudUnbind(){
+  if(!confirm('确定解除云同步绑定？本地数据保留。')) return;
+  Cloud.unbind();
+  updateCloudStatus();
+  toast('已解除云同步');
+}
+function reloadLocal(){
+  try{ track = JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }catch(e){ track={}; }
+  try{ entries = JSON.parse(localStorage.getItem(ENTRY_KEY)) || []; }catch(e){ entries=[]; }
+  try{ hided = JSON.parse(localStorage.getItem(HIDE_KEY)) || []; }catch(e){ hided=[]; }
+  renderNew(); renderD5(); refreshStats(); renderReminder(); renderInterview(); applyFilters();
+}
+document.getElementById('cloudModal').addEventListener('click',e=>{ if(e.target.id==='cloudModal') closeCloudModal(); });
+</script>
+
 
 <div class="modal-mask" id="guideMask">
   <div class="modal">
@@ -562,6 +643,7 @@ document.getElementById('dsModal').addEventListener('click',e=>{ if(e.target.id=
 <script src="data.js"></script>
 <script src="deepseek_usage.js"></script>
 <script src="auth.js"></script>
+<script src="cloud.js"></script>
 <script>
 /* ============ 登录检查 ============ */
 (function guardLogin(){
@@ -579,7 +661,32 @@ const STORE_KEY = Auth.userKey('qiuzhao27_track_v1');
 let track = {};   // recordId -> {applied, assess, itv:{1:{time,note,done},2:...,3:...}, offer:'active'|'offered'|'rejected'}
 try{ track = JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }catch(e){ track = {}; }
 
-function saveTrack(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(track)); }catch(e){} }
+function saveTrack(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(track)); }catch(e){} window.Cloud&&Cloud.schedulePush&&Cloud.schedulePush(); }
+
+/* ===== 不感兴趣（隐藏的 offer） ===== */
+const HIDE_KEY = Auth.userKey('qiuzhao27_hided_v1');
+let hided = [];
+try{ hided = JSON.parse(localStorage.getItem(HIDE_KEY)) || []; }catch(e){ hided = []; }
+function saveHided(){ try{ localStorage.setItem(HIDE_KEY, JSON.stringify(hided)); }catch(e){} window.Cloud&&Cloud.schedulePush&&Cloud.schedulePush(); }
+function hideOffer(rid,btn){
+  if(!hided.includes(rid)) hided.push(rid);
+  saveHided();
+  renderNew(); renderD5();
+  toast('🙅 已隐藏，不再显示该 offer');
+}
+function unhideOffer(rid){
+  hided = hided.filter(x=>x!==rid);
+  saveHided();
+  renderNew(); renderD5();
+  toast('已恢复显示');
+}
+function resetHided(){
+  hided = [];
+  saveHided();
+  renderNew(); renderD5();
+  toast('✅ 已恢复全部隐藏的 offer');
+}
+function isHided(rid){ return hided.includes(rid); }
 
 /* ===== 自定义投递公司（搜索无结果时创建） ===== */
 const ENTRY_KEY = Auth.userKey('qiuzhao27_entries_v1');
@@ -1110,10 +1217,17 @@ function renderTable(){
 function renderNew(){
   const grid=document.getElementById('newGrid');
   const today=todayStr();
-  const recs=(MAIN_TAB?MAIN_TAB.records:[]).filter(r=>r.v['更新日期']===today);
+  let recs=(MAIN_TAB?MAIN_TAB.records:[]).filter(r=>r.v['更新日期']===today);
+  // 过滤不感兴趣的 offer
+  const hiddenCount = recs.filter(r=>isHided(r.id)).length;
+  recs = recs.filter(r=>!isHided(r.id));
+  // 恢复入口
+  const resetHtml = hiddenCount ? `<button class="mini-btn" style="margin-left:8px;font-size:11px" onclick="resetHided()" title="恢复全部隐藏的 offer">↩️ 恢复隐藏 ${hiddenCount} 个</button>` : '';
   document.getElementById('stNew').textContent=recs.length;
   document.getElementById('todayBadge').textContent=`📅 今天：${today}`;
-  document.getElementById('newCountBadge').textContent=`🆕 今日新开：${recs.length} 家`;
+  document.getElementById('newCountBadge').textContent=`🆕 今日新开：${recs.length} 家${hiddenCount?`（已隐藏 ${hiddenCount}）`:''}`;
+  const newTitle=document.getElementById('newTitle');
+  if(newTitle) newTitle.innerHTML=`🆕 今日新开秋招 <span class="tag" id="todayTag">NEW</span>${resetHtml}`;
   if(!recs.length){ grid.innerHTML='<div style="grid-column:1/-1;background:var(--card);border:1px dashed var(--border);border-radius:12px;padding:28px;text-align:center;color:var(--gray)">今日暂无新开公司（数据更新到最近日期）<br><button class="header-btn ghost" style="border:1px solid var(--primary);color:var(--primary);margin-top:10px" onclick="showRecent()">查看最近更新</button></div>'; return; }
   // 卡片渲染函数
   const cardHtml=r=>{
@@ -1131,6 +1245,7 @@ function renderNew(){
       <div class="nc-actions">
         ${links.length?`<a class="link-btn" href="${esc(links[0].url)}" target="_blank" rel="noopener">🚀 去投递</a>`:''}
         <button class="mini-btn ${st.applied?'done':''}" onclick="toggleApplied('${r.id}',this)">${st.applied?'✅ 已投递':'投递'}</button>
+        <button class="mini-btn no" onclick="hideOffer('${r.id}',this)" title="不感兴趣，不再显示">🙅</button>
       </div>
     </div>`;
   };
@@ -1172,10 +1287,12 @@ function renderD5(){
   const today=todayStr();
   const d5=daysAgoStr(5);
   // 近5天新增 = 更新日期在 [today-5, today) 区间（今日已在左侧展示，不重复）
-  const recs=MAIN_TAB.records.filter(r=>{
+  let recs=MAIN_TAB.records.filter(r=>{
     const d=r.v['更新日期']||'';
     return d>=d5 && d<today;
   });
+  // 过滤不感兴趣的 offer
+  recs = recs.filter(r=>!isHided(r.id));
   cnt.textContent=`${recs.length} 家`;
   if(!recs.length){
     list.innerHTML='<div class="d5-empty">近5天暂无新增公司<br>（今日新开请看左侧）</div>';
@@ -1192,7 +1309,7 @@ function renderD5(){
     const v=r.v; const urls=allUrls(v['投递链接']||v['投递链接or推文']);
     const go=urls.length?urls[0].url:'';
     return `<div class="d5-item">
-      <div class="r1"><span class="nm">${esc(v['公司名称']||'')}</span></div>
+      <div class="r1"><span class="nm">${esc(v['公司名称']||'')}</span><button class="d5-hide" onclick="hideOffer('${r.id}',this)" title="不感兴趣，不再显示">🙅</button></div>
       <div class="pos">${esc(v['招聘岗位']||'—')}</div>
       <div class="bt"><span>${esc(v['批次']||'')}</span><span>📍 ${esc(v['工作地点']||'—')}</span>${go?`<a class="go" href="${esc(go)}" target="_blank" rel="noopener">去投递 →</a>`:''}</div>
     </div>`;
@@ -1436,6 +1553,10 @@ document.addEventListener('DOMContentLoaded',()=>{
   startAutoRefresh();
   const ub=document.getElementById('userBadge');
   if(ub && window.CURRENT_USER) ub.textContent=`👤 ${window.CURRENT_USER.username}`;
+  // 云同步：登录后自动拉取云端数据（合并到本地）
+  if(window.Cloud && Cloud.status().bound){
+    Cloud.pull(true).then(()=>{ reloadLocal(); });
+  }
   collectFilters();
   renderNew();
   renderD5();

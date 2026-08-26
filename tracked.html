@@ -206,6 +206,7 @@ footer{margin-top:30px;text-align:center;font-size:12px;color:var(--gray);line-h
 
 <script src="data.js"></script>
 <script src="auth.js"></script>
+<script src="cloud.js"></script>
 <script>
 /* ============ 登录检查 ============ */
 (function guardLogin(){
@@ -223,7 +224,7 @@ try{ track = JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }catch(e){ track
 
 /* 书签导入已移除（不再从 Edge 个人书签读取官网） */
 
-function saveTrack(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(track)); }catch(e){} }
+function saveTrack(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(track)); }catch(e){} window.Cloud&&Cloud.schedulePush&&Cloud.schedulePush(); }
 function getRec(rid){ if(!track[rid]) track[rid]={applied:false,assess:false,itv:{},offer:'active'}; return track[rid]; }
 
 function esc(s){ if(s==null) return ''; return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -236,7 +237,7 @@ function allUrls(v){ if(!Array.isArray(v)) return []; return v.filter(x=>x&&x.ur
 const ENTRY_KEY = Auth.userKey('qiuzhao27_entries_v1');
 let entries = [];  // [{id, name, url, tracked, createdAt}]  tracked:true 表示创建投递公司
 try{ entries = JSON.parse(localStorage.getItem(ENTRY_KEY)) || []; }catch(e){ entries = []; }
-function saveEntries(){ try{ localStorage.setItem(ENTRY_KEY, JSON.stringify(entries)); }catch(e){} }
+function saveEntries(){ try{ localStorage.setItem(ENTRY_KEY, JSON.stringify(entries)); }catch(e){} window.Cloud&&Cloud.schedulePush&&Cloud.schedulePush(); }
 
 /* 自定义投递公司 -> 虚拟 record（与表格记录同结构，便于复用渲染） */
 function customRecords(){
