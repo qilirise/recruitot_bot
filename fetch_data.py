@@ -154,20 +154,6 @@ def main():
     # generate human-readable daily report (markdown)
     write_daily_report(result)
 
-    # sync Edge bookmarks -> applied_sites.js (已投递自动导入)
-    # GitHub Actions 环境无 Edge 书签，通过环境变量 QIUZHAO_SKIP_BOOKMARKS=1 跳过
-    if os.environ.get('QIUZHAO_SKIP_BOOKMARKS') == '1':
-        print('[info] 跳过书签同步（Actions 环境）')
-    else:
-        try:
-            import importlib.util
-            spec = importlib.util.spec_from_file_location('sync_bookmarks', os.path.join(OUT_DIR, 'sync_bookmarks.py'))
-            sb = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(sb)
-            sb.main()
-        except Exception as e:
-            print(f'[warn] bookmark sync skipped: {e}')
-
     # sync DeepSeek API balance -> deepseek_usage.js
     try:
         import importlib.util

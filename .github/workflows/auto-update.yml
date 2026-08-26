@@ -26,7 +26,6 @@ jobs:
       - name: Fetch data from Tencent Docs
         env:
           QIUZHAO_OUT_DIR: ${{ github.workspace }}
-          QIUZHAO_SKIP_BOOKMARKS: '1'
         run: |
           python fetch_data.py
 
