@@ -6,6 +6,7 @@ on:
   schedule:
     - cron: '*/30 * * * *'
   workflow_dispatch: {}  # 支持手动触发
+  push:                  # 临时：手动激活一次验证云端链路
 
 permissions:
   contents: write
