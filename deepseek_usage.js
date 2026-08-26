@@ -1,1 +1,1 @@
-window.DEEPSEEK_USAGE = {"generatedAt": "2026-08-26 08:39:07", "configured": false, "error": "未配置 API Key（环境变量 DEEPSEEK_API_KEY 或 deepseek_config.json）", "total": null, "remaining": null, "used": null, "percent": 0, "currency": "CNY", "is_available": false, "total_set": false};
+window.DEEPSEEK_USAGE = {"generatedAt": "2026-08-26 09:37:21", "configured": false, "error": "未配置 API Key（环境变量 DEEPSEEK_API_KEY 或 deepseek_config.json）", "total": null, "remaining": null, "used": null, "percent": 0, "currency": "CNY", "is_available": false, "total_set": false};
