@@ -19,7 +19,22 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [2/2] 数据更新完成！
+echo [2/3] 数据更新完成！
+echo.
+
+echo [3/3] 同步到 GitHub...
+set PATH=C:\Program Files\Git\bin;%PATH%
+git add -A
+git commit -m "每日数据更新 %date% %time%" >nul 2>&1
+git push origin main
+if errorlevel 1 (
+    echo.
+    echo [警告] GitHub 同步失败（可能未配置 token 或网络问题）
+    echo 数据已保存在本地，可稍后双击「配置GitHub同步.bat」配置后手动同步
+) else (
+    echo GitHub 同步成功!
+)
+
 echo.
 echo 数据文件：data.js
 echo 打开 index.html 即可查看最新秋招日报

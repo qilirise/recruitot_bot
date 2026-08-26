@@ -7,3 +7,6 @@ deepseek_config.json
 __pycache__/
 *.pyc
 *.log
+
+# GitHub 凭据文件（绝不上传）
+.git-credentials
