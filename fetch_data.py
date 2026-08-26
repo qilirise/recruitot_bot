@@ -10,7 +10,8 @@ import json, re, html, sys, os, datetime, urllib.request, urllib.parse
 DOC_ID = 'DTkRMUVhoUWJXZEhJ'
 PAD_ID = 'NDLQXhQbWdHI'
 BASE = 'https://docs.qq.com/dop-api/opendoc'
-OUT_DIR = r'C:\Users\24345\Desktop\27秋招'
+# 输出目录：优先环境变量 QIUZHAO_OUT_DIR（GitHub Actions 使用），否则脚本所在目录
+OUT_DIR = os.environ.get('QIUZHAO_OUT_DIR') or os.path.dirname(os.path.abspath(__file__))
 
 HDRS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36',
@@ -154,14 +155,18 @@ def main():
     write_daily_report(result)
 
     # sync Edge bookmarks -> applied_sites.js (已投递自动导入)
-    try:
-        import importlib.util
-        spec = importlib.util.spec_from_file_location('sync_bookmarks', os.path.join(OUT_DIR, 'sync_bookmarks.py'))
-        sb = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(sb)
-        sb.main()
-    except Exception as e:
-        print(f'[warn] bookmark sync skipped: {e}')
+    # GitHub Actions 环境无 Edge 书签，通过环境变量 QIUZHAO_SKIP_BOOKMARKS=1 跳过
+    if os.environ.get('QIUZHAO_SKIP_BOOKMARKS') == '1':
+        print('[info] 跳过书签同步（Actions 环境）')
+    else:
+        try:
+            import importlib.util
+            spec = importlib.util.spec_from_file_location('sync_bookmarks', os.path.join(OUT_DIR, 'sync_bookmarks.py'))
+            sb = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(sb)
+            sb.main()
+        except Exception as e:
+            print(f'[warn] bookmark sync skipped: {e}')
 
     # sync DeepSeek API balance -> deepseek_usage.js
     try:

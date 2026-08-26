@@ -1,0 +1,43 @@
+name: Auto Update Data
+
+# 每 30 分钟自动抓取腾讯文档数据并推送到仓库（GitHub Pages 自动重建）
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch: {}  # 支持手动触发
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Fetch data from Tencent Docs
+        env:
+          QIUZHAO_OUT_DIR: ${{ github.workspace }}
+          QIUZHAO_SKIP_BOOKMARKS: '1'
+        run: |
+          python fetch_data.py
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "qiuzhao27-bot"
+          git config user.email "qiuzhao27-bot@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No data changes, skip commit"
+          else
+            git commit -m "chore: auto update data $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git push
+            echo "Pushed data update"
+          fi
