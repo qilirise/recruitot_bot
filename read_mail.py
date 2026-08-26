@@ -10,18 +10,36 @@
   python read_mail.py --demo   # 用内置示例邮件测试识别逻辑（无需邮箱）
 """
 import json, os, re, sys, imaplib, email, datetime
+
 from email.header import decode_header
 from email.utils import parsedate_to_datetime
 
-OUT_DIR = r'C:\Users\24345\Desktop\27秋招'
+# 输出目录：优先环境变量（GitHub Actions），否则脚本所在目录
+OUT_DIR = os.environ.get('QIUZHAO_OUT_DIR') or os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(OUT_DIR, 'mail_config.json')
 
 # ============ 配置 ============
 def load_config():
+    """配置优先级：环境变量（GitHub Actions Secrets）> 本地 mail_config.json"""
+    cfg = {}
     if os.path.exists(CONFIG_PATH):
         with open(CONFIG_PATH, encoding='utf-8') as f:
-            return json.load(f)
-    return {}
+            cfg = json.load(f)
+    # 环境变量覆盖（云端自动更新用）
+    env_map = {
+        'MAIL_IMAP_HOST': 'imap_host',
+        'MAIL_IMAP_PORT': 'imap_port',
+        'MAIL_EMAIL': 'email',
+        'MAIL_APP_PASSWORD': 'app_password',
+    }
+    for env_name, cfg_key in env_map.items():
+        v = os.environ.get(env_name, '').strip()
+        if v:
+            cfg[cfg_key] = v
+    # 云端环境视为已启用
+    if os.environ.get('MAIL_EMAIL', '').strip() and os.environ.get('MAIL_APP_PASSWORD', '').strip():
+        cfg['enabled'] = True
+    return cfg
 
 # ============ 邮件解析 ============
 def decode_mime(s):

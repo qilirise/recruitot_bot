@@ -5,11 +5,16 @@ DeepSeek API 余额监控
 调用 https://api.deepseek.com/user/balance 获取余额，
 生成 deepseek_usage.js 供网页进度条展示。
 
+配置优先级（支持云端 GitHub Actions 自动更新）：
+  1. 环境变量 DEEPSEEK_API_KEY（GitHub Secrets 注入，推荐）
+  2. 本地 deepseek_config.json（api_key + enabled）
+
 用法: python fetch_deepseek.py
 """
 import json, os, sys, datetime, urllib.request, urllib.error
 
-OUT_DIR = r'C:\Users\24345\Desktop\27秋招'
+# 输出目录：优先环境变量（GitHub Actions），否则脚本所在目录
+OUT_DIR = os.environ.get('QIUZHAO_OUT_DIR') or os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(OUT_DIR, 'deepseek_config.json')
 BALANCE_API = 'https://api.deepseek.com/user/balance'
 
@@ -41,11 +46,15 @@ def main():
     cfg = load_config()
     now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-    if not cfg.get('enabled') or not cfg.get('api_key'):
+    # API Key 来源：环境变量 DEEPSEEK_API_KEY（GitHub Actions Secrets）优先，否则本地配置
+    api_key = os.environ.get('DEEPSEEK_API_KEY', '').strip() or cfg.get('api_key', '')
+    enabled = os.environ.get('DEEPSEEK_ENABLED', '') == '1' or cfg.get('enabled', False)
+
+    if not enabled or not api_key:
         payload = {
             'generatedAt': now,
             'configured': False,
-            'error': '未配置 API Key（deepseek_config.json）',
+            'error': '未配置 API Key（环境变量 DEEPSEEK_API_KEY 或 deepseek_config.json）',
             'total': None, 'remaining': None, 'used': None, 'percent': 0,
             'currency': 'CNY', 'is_available': False,
             'total_set': False,
@@ -54,7 +63,7 @@ def main():
         print('[warn] DeepSeek 未配置，生成空状态')
         return
 
-    data = fetch_balance(cfg['api_key'])
+    data = fetch_balance(api_key)
     if 'error' in data:
         payload = {
             'generatedAt': now,
@@ -83,14 +92,19 @@ def main():
     else:
         granted = topped = total_raw = 0
 
-    # 总金额：优先手动配置，否则首次自动记录
-    total_set = bool(cfg.get('total_amount'))
-    if total_set:
+    # 总金额：环境变量 DEEPSEEK_TOTAL_AMOUNT > 本地配置 total_amount > 首次自动记录
+    env_total = os.environ.get('DEEPSEEK_TOTAL_AMOUNT', '').strip()
+    total_set = bool(env_total) or bool(cfg.get('total_amount'))
+    if env_total:
+        total = float(env_total)
+    elif cfg.get('total_amount'):
         total = float(cfg['total_amount'])
     else:
+        # 首次自动记录（本地可持久化；Actions 环境每次重新计算，不写文件）
         if cfg.get('_baseline_total') is None:
             cfg['_baseline_total'] = total_raw if total_raw > 0 else remaining
-            save_config(cfg)
+            if not os.environ.get('QIUZHAO_OUT_DIR'):
+                save_config(cfg)
             total_set = True
         total = float(cfg.get('_baseline_total') or remaining)
 

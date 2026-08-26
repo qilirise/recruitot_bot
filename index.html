@@ -1137,44 +1137,25 @@ function renderDeepSeek(){
     <div style="font-size:10.5px;opacity:.6;margin-top:8px">更新于 ${esc(d.generatedAt||'')}${d.total_set?'':' · 总金额=首次记录余额'}</div>`;
 }
 
-/* ===== DeepSeek 用量刷新（需通过本地服务 http://localhost:8000 打开） ===== */
+/* ===== DeepSeek 用量刷新（云端自动更新：重新加载云端数据文件） ===== */
 function refreshDeepSeek(){
   const btn=document.getElementById('dsRefreshBtn');
   if(btn){ btn.disabled=true; btn.textContent='刷新中…'; }
-  const viaHttp = location.protocol==='http:' || location.protocol==='https:';
-  if(!viaHttp){
-    toast('请通过「局域网分享.bat」服务打开网页（http://localhost:8000）使用刷新功能');
+  // 重新加载 deepseek_usage.js（带时间戳防缓存）——数据由 GitHub Actions 云端自动更新
+  const old=document.querySelector('script[src^="deepseek_usage.js"]');
+  if(old) old.remove();
+  const s=document.createElement('script');
+  s.src='deepseek_usage.js?t='+Date.now();
+  s.onload=()=>{
+    renderDeepSeek();
+    toast('✅ 已加载云端最新用量');
     if(btn){ btn.disabled=false; btn.textContent='🔄 刷新'; }
-    return;
-  }
-  fetch('/api/refresh-deepseek', {cache:'no-store'})
-    .then(r=>r.json())
-    .then(data=>{
-      if(data.ok){
-        // 重新加载 deepseek_usage.js（带时间戳防缓存）
-        const old=document.querySelector('script[src^="deepseek_usage.js"]');
-        if(old) old.remove();
-        const s=document.createElement('script');
-        s.src='deepseek_usage.js?t='+Date.now();
-        s.onload=()=>{
-          renderDeepSeek();
-          toast('✅ 用量已刷新');
-          if(btn){ btn.disabled=false; btn.textContent='🔄 刷新'; }
-        };
-        s.onerror=()=>{
-          toast('❌ 刷新失败：数据文件加载错误');
-          if(btn){ btn.disabled=false; btn.textContent='🔄 刷新'; }
-        };
-        document.body.appendChild(s);
-      } else {
-        toast('❌ 刷新失败：'+(data.output||'未知错误').slice(0,80));
-        if(btn){ btn.disabled=false; btn.textContent='🔄 刷新'; }
-      }
-    })
-    .catch(()=>{
-      toast('❌ 刷新失败：无法连接本地服务');
-      if(btn){ btn.disabled=false; btn.textContent='🔄 刷新'; }
-    });
+  };
+  s.onerror=()=>{
+    toast('❌ 加载失败（云端数据尚未生成，请在 GitHub 配置 DEEPSEEK_API_KEY Secrets）');
+    if(btn){ btn.disabled=false; btn.textContent='🔄 刷新'; }
+  };
+  document.body.appendChild(s);
 }
 
 /* ===== 简历入口（仅主账户显示链接，新账户引导） ===== */

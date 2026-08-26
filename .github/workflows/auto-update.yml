@@ -1,6 +1,7 @@
 name: Auto Update Data
 
-# 每 30 分钟自动抓取腾讯文档数据并推送到仓库（GitHub Pages 自动重建）
+# 每 30 分钟自动抓取腾讯文档数据 + DeepSeek 用量，推送到仓库（GitHub Pages 自动重建）
+# 全部在线托管：本地无需运行任何脚本
 on:
   schedule:
     - cron: '*/30 * * * *'
@@ -28,6 +29,23 @@ jobs:
           QIUZHAO_SKIP_BOOKMARKS: '1'
         run: |
           python fetch_data.py
+
+      - name: Fetch DeepSeek balance
+        env:
+          QIUZHAO_OUT_DIR: ${{ github.workspace }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          DEEPSEEK_TOTAL_AMOUNT: ${{ secrets.DEEPSEEK_TOTAL_AMOUNT }}
+        run: |
+          python fetch_deepseek.py
+
+      - name: Fetch mail events (optional, requires secrets)
+        env:
+          QIUZHAO_OUT_DIR: ${{ github.workspace }}
+          MAIL_IMAP_HOST: ${{ secrets.MAIL_IMAP_HOST }}
+          MAIL_EMAIL: ${{ secrets.MAIL_EMAIL }}
+          MAIL_APP_PASSWORD: ${{ secrets.MAIL_APP_PASSWORD }}
+        run: |
+          python read_mail.py || echo "mail fetch skipped (secrets not configured)"
 
       - name: Commit and push if changed
         run: |
