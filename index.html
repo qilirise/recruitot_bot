@@ -222,6 +222,8 @@ header .sub{margin-top:6px;font-size:13px;opacity:.92}
 .d5-item .nm{font-size:13px;font-weight:700;color:var(--text)}
 .d5-item .dt{font-size:10.5px;color:var(--primary);background:var(--primary-light);padding:1px 7px;border-radius:8px;font-weight:600;margin-left:auto;white-space:nowrap}
 .d5-item .pos{font-size:11.5px;color:var(--gray);line-height:1.5;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.d5-item .pos.code-first{color:#92400e;background:#fff7ed;border:1px dashed var(--amber);border-radius:6px;padding:2px 8px;margin-top:4px;font-weight:600;display:block}
+.d5-item .pos.code-first b{color:#b45309}
 .d5-item .bt{font-size:10.5px;color:var(--gray);display:flex;gap:8px;align-items:center}
 .d5-item .bt .go{color:var(--primary);font-weight:600;text-decoration:none;margin-left:auto}
 .d5-item .bt .go:hover{text-decoration:underline}
@@ -258,6 +260,9 @@ header .sub{margin-top:6px;font-size:13px;opacity:.92}
 .new-card .nc-name{font-size:15px;font-weight:700;color:var(--primary-dark)}
 .new-card .nc-date{font-size:11px;background:var(--primary-light);color:var(--primary);padding:2px 8px;border-radius:10px;white-space:nowrap}
 .new-card .nc-batch{font-size:11px;background:var(--amber-bg);color:var(--amber);padding:2px 8px;border-radius:10px;margin-top:6px;display:inline-block}
+/* 内推码优先展示（置顶高亮） */
+.new-card .nc-code{margin-top:8px;background:linear-gradient(90deg,#fff7ed,#ffedd5);border:1px dashed var(--amber);color:#92400e;font-size:12.5px;padding:5px 10px;border-radius:8px;font-weight:600}
+.new-card .nc-code b{color:#b45309;font-size:14px;letter-spacing:.5px}
 .new-card .nc-pos{margin-top:8px;font-size:12.5px;color:var(--text);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .new-card .nc-meta{margin-top:8px;font-size:11.5px;color:var(--gray);display:flex;flex-wrap:wrap;gap:4px 12px}
 .new-card .nc-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
@@ -292,6 +297,7 @@ td .co-sub{font-size:11px;color:var(--gray);margin-top:2px}
 .url-list a{color:var(--primary);text-decoration:none;font-size:12px;word-break:break-all}
 .url-list a:hover{text-decoration:underline}
 .code-chip{display:inline-block;background:var(--amber-bg);color:var(--amber);font-size:11px;padding:2px 8px;border-radius:6px;margin-top:2px;font-weight:600}
+.code-chip.code-first-row{display:block;margin-bottom:4px;background:#fff7ed;border:1px dashed var(--amber);color:#92400e;padding:3px 8px}
 .ind-tag{display:inline-block;background:#f1f5f9;color:var(--gray);font-size:11px;padding:2px 8px;border-radius:6px;margin:2px 2px 0 0}
 .batch-tag{display:inline-block;background:var(--purple-bg);color:var(--purple);font-size:11px;padding:2px 8px;border-radius:6px}
 .deadline{font-size:12px}
@@ -1125,8 +1131,8 @@ function renderRow(r){
       <div class="deadline ${dlWarn?'warn':''}" style="margin-top:4px">⏰ ${esc(dl)||'—'}${dlWarn?' ⚠️':''}</div>
     </td>
     <td>
+      ${code? `<span class="code-chip code-first-row">🎁 内推码：${esc(code)}</span>`:''}
       ${urlHtml}
-      ${code? `<span class="code-chip">🎁 ${esc(code)}</span>`:''}
       ${pubHtml}
     </td>
     <td>
@@ -1237,7 +1243,7 @@ function renderNew(){
   const newTitle=document.getElementById('newTitle');
   if(newTitle) newTitle.innerHTML=`🆕 今日新开秋招 <span class="tag" id="todayTag">NEW</span>${resetHtml}`;
   if(!recs.length){ grid.innerHTML='<div style="grid-column:1/-1;background:var(--card);border:1px dashed var(--border);border-radius:12px;padding:28px;text-align:center;color:var(--gray)">今日暂无新开公司（数据更新到最近日期）<br><button class="header-btn ghost" style="border:1px solid var(--primary);color:var(--primary);margin-top:10px" onclick="showRecent()">查看最近更新</button></div>'; return; }
-  // 卡片渲染函数
+  // 卡片渲染函数（内推码优先：有内推码则置顶展示，公司介绍放后面）
   const cardHtml=r=>{
     const v=r.v; const urls=allUrls(v['投递链接']||v['投递链接or推文']);
     const pub=allUrls(v['官方公告']);
@@ -1246,10 +1252,10 @@ function renderNew(){
     const allLinks=[...urls,...pub];
     return `<div class="new-card">
       <div class="nc-top"><div class="nc-name">${esc(v['公司名称']||'')}</div><div class="nc-date">🆕 今日新开</div></div>
+      ${code?`<div class="nc-code">🎁 内推码：<b>${esc(code)}</b></div>`:''}
       <div class="nc-batch">${esc(v['批次']||'')}</div>
       <div class="nc-pos">${esc(v['招聘岗位']||'')}</div>
       <div class="nc-meta"><span>📍 ${esc(v['工作地点']||'—')}</span><span>⏰ ${esc(v['招聘截止日期']||'—')}</span><span>🏭 ${esc(v['行业']||'—')}</span></div>
-      ${code?`<div class="code-chip">🎁 ${esc(code)}</div>`:''}
       <div class="nc-actions">
         ${links.length?`<a class="link-btn" href="${esc(links[0].url)}" target="_blank" rel="noopener">🚀 去投递</a>`:''}
         <button class="mini-btn ${st.applied?'done':''}" onclick="toggleApplied('${r.id}',this)">${st.applied?'✅ 已投递':'投递'}</button>
@@ -1257,12 +1263,14 @@ function renderNew(){
       </div>
     </div>`;
   };
-  // 抽屉内列表项
+  // 抽屉内列表项（内推码优先展示）
   const drawerItem=r=>{
     const v=r.v; const urls=allUrls(v['投递链接']||v['投递链接or推文']);
     const go=urls.length?urls[0].url:'';
+    const code=v['内推码']||'';
     return `<div class="d5-item">
       <div class="r1"><span class="nm">${esc(v['公司名称']||'')}</span></div>
+      ${code?`<div class="pos code-first">🎁 内推码：<b>${esc(code)}</b></div>`:''}
       <div class="pos">${esc(v['招聘岗位']||'—')}</div>
       <div class="bt"><span>${esc(v['批次']||'')}</span><span>📍 ${esc(v['工作地点']||'—')}</span>${go?`<a class="go" href="${esc(go)}" target="_blank" rel="noopener">去投递 →</a>`:''}</div>
     </div>`;
@@ -1316,8 +1324,10 @@ function renderD5(){
   const itemHtml=r=>{
     const v=r.v; const urls=allUrls(v['投递链接']||v['投递链接or推文']);
     const go=urls.length?urls[0].url:'';
+    const code=v['内推码']||'';
     return `<div class="d5-item">
       <div class="r1"><span class="nm">${esc(v['公司名称']||'')}</span><button class="d5-hide" onclick="hideOffer('${r.id}',this)" title="不感兴趣，不再显示">🙅</button></div>
+      ${code?`<div class="pos code-first">🎁 内推码：<b>${esc(code)}</b></div>`:''}
       <div class="pos">${esc(v['招聘岗位']||'—')}</div>
       <div class="bt"><span>${esc(v['批次']||'')}</span><span>📍 ${esc(v['工作地点']||'—')}</span>${go?`<a class="go" href="${esc(go)}" target="_blank" rel="noopener">去投递 →</a>`:''}</div>
     </div>`;
