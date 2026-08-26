@@ -243,6 +243,19 @@ let entries = [];    // [{id, name, url, eventId, type, link, date, time, create
 try{ entries = JSON.parse(localStorage.getItem(ENTRY_KEY)) || []; }catch(e){ entries = []; }
 
 function saveTrack(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(track)); }catch(e){} window.Cloud&&Cloud.schedulePush&&Cloud.schedulePush(); }
+
+/* 多链接支持（与首页一致） */
+function getAssessLinks(st){
+  if(st && Array.isArray(st.assessLinks) && st.assessLinks.length) return st.assessLinks.filter(Boolean);
+  if(st && st.assessLink) return [st.assessLink];
+  return [];
+}
+function setAssessLinks(st, arr){
+  const a=(arr||[]).map(x=>String(x==null?'':x).trim()).filter(Boolean);
+  if(a.length){ st.assessLinks=a; delete st.assessLink; }
+  else { delete st.assessLinks; delete st.assessLink; }
+  return a;
+}
 function saveProcessed(){ try{ localStorage.setItem(MAIL_KEY, JSON.stringify(processed)); }catch(e){} window.Cloud&&Cloud.schedulePush&&Cloud.schedulePush(); }
 function saveEntries(){ try{ localStorage.setItem(ENTRY_KEY, JSON.stringify(entries)); }catch(e){} window.Cloud&&Cloud.schedulePush&&Cloud.schedulePush(); }
 function getRec(rid){ if(!track[rid]) track[rid]={applied:false,assess:false,itv:{},offer:'active'}; return track[rid]; }
@@ -258,7 +271,10 @@ function applyEvent(ev){
   const st = getRec(rec.id);
   st.applied = true;
   if(ev.type==='assess'){
-    if(ev.link) st.assessLink = ev.link;
+    if(ev.link){
+      const cur=getAssessLinks(st);
+      if(!cur.includes(ev.link)) setAssessLinks(st, cur.concat(ev.link));
+    }
     // 截止日期不自动设置——由用户在弹窗中手动填写
     st.assess = st.assess || false;
     toast('✅ 已应用测评链接 → '+(rec.v['公司名称']||rec.id));

@@ -219,6 +219,8 @@ header .sub{margin-top:6px;font-size:13px;opacity:.92}
 .d5-hide:hover{opacity:1;border-color:var(--red);background:#fff5f5}
 .mini-btn.no{background:#f1f5f9;color:var(--gray);font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:7px;cursor:pointer}
 .mini-btn.no:hover{background:#fff5f5;border-color:var(--red);color:var(--red)}
+.mini-add{background:var(--primary);color:#fff;border:none;border-radius:7px;padding:2px 10px;font-size:11px;cursor:pointer;font-weight:600;margin-left:6px;vertical-align:middle}
+.mini-add:hover{background:var(--primary-dark)}
 .d5-item .nm{font-size:13px;font-weight:700;color:var(--text)}
 .d5-item .dt{font-size:10.5px;color:var(--primary);background:var(--primary-light);padding:1px 7px;border-radius:8px;font-weight:600;margin-left:auto;white-space:nowrap}
 .d5-item .pos{font-size:11.5px;color:var(--gray);line-height:1.5;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
@@ -424,11 +426,11 @@ footer{margin-top:30px;text-align:center;font-size:12px;color:var(--gray);line-h
     </div>
     <div class="reminder-flex">
       <div class="reminder-main">
-        <div class="section-title" style="font-size:14px">⏰ 测评提醒 <span class="tag" id="reminderCount">0</span></div>
+        <div class="section-title" style="font-size:14px">⏰ 测评提醒 <span class="tag" id="reminderCount">0</span> <button class="mini-add" onclick="openAddItem('assess')" title="直接添加测评事项">➕ 添加</button></div>
         <div class="reminder-grid" id="reminderGrid"></div>
       </div>
       <div class="interview-side">
-        <div class="section-title" style="font-size:14px">🎤 面试提醒 <span class="tag" id="itvRemindCount">0</span></div>
+        <div class="section-title" style="font-size:14px">🎤 面试提醒 <span class="tag" id="itvRemindCount">0</span> <button class="mini-add" onclick="openAddItem('interview')" title="直接添加面试事项">➕ 添加</button></div>
         <div class="itv-remind-list" id="itvRemindList"></div>
       </div>
       <div class="side-cards">
@@ -616,6 +618,99 @@ function reloadLocal(){
 document.getElementById('cloudModal').addEventListener('click',e=>{ if(e.target.id==='cloudModal') closeCloudModal(); });
 </script>
 
+<!-- 添加事项模态框（重要看板：直接添加测评/面试） -->
+<div class="modal-mask" id="addItemModal">
+  <div class="modal" style="max-width:440px">
+    <h3 id="addItemTitle">➕ 添加事项</h3>
+    <div class="row" style="margin-bottom:8px">
+      <input type="text" id="addName" list="addNameList" placeholder="输入公司名称（自动匹配，未匹配则创建自定义）" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+      <datalist id="addNameList"></datalist>
+    </div>
+    <div class="row" style="margin-bottom:8px">
+      <select id="addType" onchange="toggleAddFields()" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+        <option value="assess">📝 测评</option>
+        <option value="interview">🎤 面试</option>
+      </select>
+    </div>
+    <div id="addAssessFields">
+      <textarea id="addLinks" rows="3" placeholder="测评链接，每行一个（支持多个）" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;outline:none;box-sizing:border-box"></textarea>
+      <input type="date" id="addDeadline" style="margin-top:8px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;width:100%;box-sizing:border-box">
+    </div>
+    <div id="addItvFields" style="display:none">
+      <input type="datetime-local" id="addItvTime" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;box-sizing:border-box">
+      <input type="text" id="addItvNote" placeholder="备注（可选，如腾讯会议）" style="margin-top:8px;width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;box-sizing:border-box">
+    </div>
+    <div class="btns" style="justify-content:flex-end;margin-top:12px">
+      <button class="ok" onclick="addItemSubmit()">✅ 添加</button>
+      <button class="no" onclick="closeAddItem()">取消</button>
+    </div>
+  </div>
+</div>
+<script>
+function openAddItem(type){
+  // 填充公司名 datalist（表格记录 + 自定义公司）
+  const dl=document.getElementById('addNameList');
+  const names=new Set();
+  (MAIN_TAB?MAIN_TAB.records:[]).forEach(r=>{ if(r.v['公司名称']) names.add(r.v['公司名称']); });
+  customRecords().forEach(r=>{ if(r.v['公司名称']) names.add(r.v['公司名称']); });
+  dl.innerHTML=[...names].map(n=>`<option value="${esc(n)}">`).join('');
+  document.getElementById('addType').value = type || 'assess';
+  toggleAddFields();
+  document.getElementById('addItemTitle').textContent = (type==='interview'?'🎤 添加面试':'📝 添加测评');
+  document.getElementById('addItemModal').classList.add('show');
+  setTimeout(()=>document.getElementById('addName').focus(), 50);
+}
+function closeAddItem(){ document.getElementById('addItemModal').classList.remove('show'); }
+function toggleAddFields(){
+  const t=document.getElementById('addType').value;
+  document.getElementById('addAssessFields').style.display = t==='assess' ? '' : 'none';
+  document.getElementById('addItvFields').style.display = t==='interview' ? '' : 'none';
+}
+function addItemSubmit(){
+  const name=document.getElementById('addName').value.trim();
+  const type=document.getElementById('addType').value;
+  if(!name){ toast('请输入公司名称'); return; }
+  // 匹配：精确匹配表格记录，否则创建自定义公司
+  let rid=null;
+  const rec=(MAIN_TAB?MAIN_TAB.records:[]).find(r=>r.v['公司名称']===name);
+  if(rec){
+    rid=rec.id;
+  } else {
+    const existing=entries.find(e=>e.name===name && e.tracked);
+    if(existing){ rid=existing.id; }
+    else {
+      const id='e'+Date.now().toString(36);
+      entries.push({id, name, url:'', tracked:true, createdAt:new Date().toISOString()});
+      saveEntries();
+      rid=id;
+    }
+  }
+  const st=getRec(rid);
+  if(type==='assess'){
+    const links=document.getElementById('addLinks').value.split('\n').map(s=>s.trim()).filter(Boolean);
+    setAssessLinks(st, links);
+    const dl=document.getElementById('addDeadline').value;
+    if(dl) st.assessDeadline=dl; else delete st.assessDeadline;
+    if(!links.length && !st.assessDeadline){ toast('请填写测评链接或截止日期'); return; }
+    saveTrack(); renderReminder(); renderInterview(); applyFilters();
+    toast('✅ 已添加测评：'+name);
+  } else {
+    const t=document.getElementById('addItvTime').value;
+    const n=document.getElementById('addItvNote').value.trim();
+    if(!t){ toast('请填写面试时间'); return; }
+    if(!st.itv) st.itv={};
+    // 找第一个空位（1/2/3面）
+    let stage=1;
+    for(let s=1;s<=3;s++){ if(!st.itv[s] || !st.itv[s].time){ stage=s; break; } }
+    st.itv[stage]={time:new Date(t).getTime(), note:n, done:false};
+    saveTrack(); renderInterview(); renderReminder(); applyFilters();
+    toast('✅ 已添加面试：'+name+'（第'+'一二三'[stage-1]+'面）');
+  }
+  closeAddItem();
+}
+document.getElementById('addItemModal').addEventListener('click',e=>{ if(e.target.id==='addItemModal') closeAddItem(); });
+</script>
+
 
 <div class="modal-mask" id="guideMask">
   <div class="modal">
@@ -676,6 +771,19 @@ let track = {};   // recordId -> {applied, assess, itv:{1:{time,note,done},2:...
 try{ track = JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }catch(e){ track = {}; }
 
 function saveTrack(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(track)); }catch(e){} window.Cloud&&Cloud.schedulePush&&Cloud.schedulePush(); }
+
+/* ===== 测评链接多链接支持（兼容旧单链接 assessLink） ===== */
+function getAssessLinks(st){
+  if(st && Array.isArray(st.assessLinks) && st.assessLinks.length) return st.assessLinks.filter(Boolean);
+  if(st && st.assessLink) return [st.assessLink];
+  return [];
+}
+function setAssessLinks(st, arr){
+  const a=(arr||[]).map(x=>String(x==null?'':x).trim()).filter(Boolean);
+  if(a.length){ st.assessLinks=a; delete st.assessLink; }
+  else { delete st.assessLinks; delete st.assessLink; }
+  return a;
+}
 
 /* ===== 不感兴趣（隐藏的 offer） ===== */
 const HIDE_KEY = Auth.userKey('qiuzhao27_hided_v1');
@@ -776,14 +884,14 @@ function toggleAssess(rid,btn){
 /* ===== 测评链接 & 截止时间 ===== */
 function assessCell(rid){
   const st=getRec(rid);
-  const link=st.assessLink||''; const dl=st.assessDeadline||'';
+  const links=getAssessLinks(st); const dl=st.assessDeadline||'';
   const today=todayStr();
   const urgent = dl && dl < today;       // 已过期
   const soon = dl && dl >= today && dl <= daysAgoStr(-3); // 3天内
   let box='';
-  if(link||dl){
+  if(links.length||dl){
     box+='<div class="assess-box">';
-    if(link) box+=`<a class="assess-link" href="${esc(link)}" target="_blank" rel="noopener" title="${esc(link)}">🔗 测评链接</a>`;
+    links.forEach(link=>{ box+=`<a class="assess-link" href="${esc(link)}" target="_blank" rel="noopener" title="${esc(link)}">🔗 测评链接 ${links.length>1?'('+(links.indexOf(link)+1)+')':''}</a>`; });
     if(dl) box+=`<span class="assess-dl ${urgent?'urgent':soon?'soon':''}">⏰ 截止：${esc(dl)}${urgent?'（已过期！）':soon?'（即将到期！）':''}</span>`;
     box+='</div>';
   }
@@ -794,7 +902,7 @@ function openAssessEdit(rid,btn){
   const box=document.getElementById('assessEdit_'+rid); if(!box) return;
   box.className='assess-edit show';
   box.innerHTML=`
-    <input type="url" id="assessL_${rid}" value="${esc(st.assessLink||'')}" placeholder="粘贴测评链接（https://…）">
+    <textarea id="assessL_${rid}" rows="3" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;outline:none" placeholder="粘贴测评链接，每行一个（支持多个）">${esc(getAssessLinks(st).join('\n'))}</textarea>
     <input type="date" id="assessD_${rid}" value="${esc(st.assessDeadline||'')}" placeholder="测评截止日期">
     <div class="btns">
       <button class="save" onclick="saveAssess('${rid}')">保存</button>
@@ -805,15 +913,15 @@ function openAssessEdit(rid,btn){
 }
 function saveAssess(rid){
   const st=getRec(rid);
-  const link=document.getElementById('assessL_'+rid).value.trim();
+  const raw=document.getElementById('assessL_'+rid).value;
   const dl=document.getElementById('assessD_'+rid).value;
-  if(link) st.assessLink=link; else delete st.assessLink;
+  setAssessLinks(st, raw.split('\n'));
   if(dl) st.assessDeadline=dl; else delete st.assessDeadline;
   saveTrack(); reRenderRow(rid); renderReminder(); toast('测评信息已保存 ✅');
 }
 function clearAssess(rid){
   const st=getRec(rid);
-  delete st.assessLink; delete st.assessDeadline;
+  delete st.assessLinks; delete st.assessLink; delete st.assessDeadline;
   saveTrack(); reRenderRow(rid); renderReminder(); toast('已清空测评信息');
 }
 function cancelAssess(rid){ const box=document.getElementById('assessEdit_'+rid); if(box) box.className='assess-edit'; }
@@ -828,7 +936,7 @@ function renderReminder(){
   const recs=MAIN_TAB.records.filter(r=>{
     const st=track[r.id];
     if(!st || st.assess) return false;          // 已完成测评的不提醒
-    if(!st.assessLink && !st.assessDeadline) return false; // 没填测评信息的不管
+    if(!getAssessLinks(st).length && !st.assessDeadline) return false; // 没填测评信息的不管
     return true;
   }).map(r=>({r,st:track[r.id]}));
   // 排序：已过期最前，然后按截止日期升序
@@ -842,7 +950,7 @@ function renderReminder(){
     return;
   }
   grid.innerHTML=recs.map(({r,st})=>{
-    const v=r.v; const link=st.assessLink||'';
+    const v=r.v; const links=getAssessLinks(st); const link=links[0]||'';
     const dl=st.assessDeadline||'';
     const overdue = dl && dl<today;
     const dueToday = dl===today;
@@ -852,14 +960,14 @@ function renderReminder(){
     const remain = dl ? (overdue?`已过期 ${Math.round((new Date(today)-new Date(dl))/86400000)} 天`:(dl===today?'今天截止':`剩 ${Math.round((new Date(dl)-new Date(today))/86400000)} 天`)) : '未填截止日期';
     return `<div class="reminder-card ${cls}">
       <div class="rc-top"><span class="rc-name">${esc(v['公司名称']||'')}</span><span class="rc-status ${cls}">${status}</span></div>
-      <div class="rc-link">${link?`<a href="${esc(link)}" target="_blank" rel="noopener">🔗 点击前往测评 →</a>`:'<span style="color:#94a3b8">未填测评链接</span>'}</div>
+      <div class="rc-link">${links.length?links.map((l,i)=>`<a href="${esc(l)}" target="_blank" rel="noopener">🔗 测评链接${links.length>1?'('+(i+1)+')':''}</a>`).join(' · '):'<span style="color:#94a3b8">未填测评链接</span>'}</div>
       <div class="rc-meta"><span class="dl ${overdue?'overdue':dueToday?'today':''}">⏰ 截止：${esc(dl)||'—'}</span><button class="rc-edit-btn" onclick="openReminderDlEdit('${r.id}')">✏️ 编辑</button> · ${remain} · 🎯 ${esc(v['招聘岗位']||'')?esc(v['招聘岗位']).slice(0,30):''}</div>
       <div class="rc-btns">
         <button class="rc-done" onclick="doneAssess('${r.id}')" title="标记测评已完成">✅ 完成</button>
         <button class="rc-del" onclick="delAssess('${r.id}')" title="删除该公司的测评信息">🗑️ 删除</button>
       </div>
       <div class="rc-dl-edit" id="rcDlEdit_${r.id}">
-        <input type="url" id="rcDlLink_${r.id}" value="${esc(link)}" placeholder="粘贴测评链接（https://…）">
+        <textarea id="rcDlLink_${r.id}" rows="2" style="flex:1;min-width:120px;border:1px solid var(--border);border-radius:6px;padding:4px 7px;font-size:12px;outline:none" placeholder="测评链接，每行一个">${esc(links.join('\n'))}</textarea>
         <input type="date" id="rcDlDate_${r.id}" value="${esc(dl)}">
         <button class="ok" onclick="saveReminderDl('${r.id}')">保存</button>
         <button class="no" onclick="cancelReminderDl('${r.id}')">取消</button>
@@ -899,7 +1007,7 @@ function renderInterview(){
           src: 'track',
           stageName: '第'+'一二三'[s-1]+'面',
           note: it.note||'',
-          link: st.assessLink||'',
+          link: getAssessLinks(st)[0]||'',
         });
       }
     });
@@ -974,7 +1082,7 @@ function doneAssess(rid){
 }
 function delAssess(rid){
   const st=getRec(rid);
-  delete st.assessLink; delete st.assessDeadline;
+  delete st.assessLinks; delete st.assessLink; delete st.assessDeadline;
   if(st.assess) st.assess=false;
   saveTrack();
   renderReminder();
@@ -1023,8 +1131,7 @@ function saveReminderDl(rid){
   const dl=inp.value;
   if(!dl){ toast('请选择日期'); return; }
   const st=getRec(rid);
-  const link=(linkInp?linkInp.value:'').trim();
-  if(link) st.assessLink=link; else if(!st.assessLink) st.assessLink='';
+  setAssessLinks(st, (linkInp?linkInp.value:'').split('\n'));
   st.assessDeadline=dl;
   saveTrack();
   renderReminder();

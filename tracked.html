@@ -225,6 +225,19 @@ try{ track = JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }catch(e){ track
 /* 书签导入已移除（不再从 Edge 个人书签读取官网） */
 
 function saveTrack(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(track)); }catch(e){} window.Cloud&&Cloud.schedulePush&&Cloud.schedulePush(); }
+
+/* 多链接支持 */
+function getAssessLinks(st){
+  if(st && Array.isArray(st.assessLinks) && st.assessLinks.length) return st.assessLinks.filter(Boolean);
+  if(st && st.assessLink) return [st.assessLink];
+  return [];
+}
+function setAssessLinks(st, arr){
+  const a=(arr||[]).map(x=>String(x==null?'':x).trim()).filter(Boolean);
+  if(a.length){ st.assessLinks=a; delete st.assessLink; }
+  else { delete st.assessLinks; delete st.assessLink; }
+  return a;
+}
 function getRec(rid){ if(!track[rid]) track[rid]={applied:false,assess:false,itv:{},offer:'active'}; return track[rid]; }
 
 function esc(s){ if(s==null) return ''; return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -306,14 +319,14 @@ function toggleAssess(rid,btn){
 /* assess link & deadline */
 function assessCell(rid){
   const st=getRec(rid);
-  const link=st.assessLink||''; const dl=st.assessDeadline||'';
+  const links=getAssessLinks(st); const dl=st.assessDeadline||'';
   const today=(()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
   const urgent = dl && dl < today;
   const soon = dl && dl >= today && dl <= (()=>{const d=new Date();d.setDate(d.getDate()-3);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
   let box='';
-  if(link||dl){
+  if(links.length||dl){
     box+='<div class="assess-box">';
-    if(link) box+=`<a class="assess-link" href="${esc(link)}" target="_blank" rel="noopener" title="${esc(link)}">🔗 测评链接</a>`;
+    links.forEach(link=>{ box+=`<a class="assess-link" href="${esc(link)}" target="_blank" rel="noopener" title="${esc(link)}">🔗 测评链接${links.length>1?'('+(links.indexOf(link)+1)+')':''}</a>`; });
     if(dl) box+=`<span class="assess-dl ${urgent?'urgent':soon?'soon':''}">⏰ 截止：${esc(dl)}${urgent?'（已过期！）':soon?'（即将到期！）':''}</span>`;
     box+='</div>';
   }
@@ -324,7 +337,7 @@ function openAssessEdit(rid,btn){
   const box=document.getElementById('assessEdit_'+rid); if(!box) return;
   box.className='assess-edit show';
   box.innerHTML=`
-    <input type="url" id="assessL_${rid}" value="${esc(st.assessLink||'')}" placeholder="粘贴测评链接（https://…）">
+    <textarea id="assessL_${rid}" rows="3" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;outline:none" placeholder="粘贴测评链接，每行一个（支持多个）">${esc(getAssessLinks(st).join('\n'))}</textarea>
     <input type="date" id="assessD_${rid}" value="${esc(st.assessDeadline||'')}" placeholder="测评截止日期">
     <div class="btns">
       <button class="save" onclick="saveAssess('${rid}')">保存</button>
@@ -335,15 +348,15 @@ function openAssessEdit(rid,btn){
 }
 function saveAssess(rid){
   const st=getRec(rid);
-  const link=document.getElementById('assessL_'+rid).value.trim();
+  const raw=document.getElementById('assessL_'+rid).value;
   const dl=document.getElementById('assessD_'+rid).value;
-  if(link) st.assessLink=link; else delete st.assessLink;
+  setAssessLinks(st, raw.split('\n'));
   if(dl) st.assessDeadline=dl; else delete st.assessDeadline;
   saveTrack(); renderAll(); toast('测评信息已保存 ✅');
 }
 function clearAssess(rid){
   const st=getRec(rid);
-  delete st.assessLink; delete st.assessDeadline;
+  delete st.assessLinks; delete st.assessLink; delete st.assessDeadline;
   saveTrack(); renderAll(); toast('已清空测评信息');
 }
 function cancelAssess(rid){ const box=document.getElementById('assessEdit_'+rid); if(box) box.className='assess-edit'; }
