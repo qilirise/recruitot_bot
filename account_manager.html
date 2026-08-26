@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>账户管理 · 27秋招</title>
+<style>
+:root{--primary:#3b6ef6;--red:#ef4444;--green:#16a34a;--bg:#f4f6fb;--card:#fff;--border:#e2e8f0;--text:#1e293b;--gray:#64748b;--radius:14px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Microsoft YaHei',system-ui,sans-serif;padding:30px 16px}
+.wrap{max-width:680px;margin:0 auto}
+h1{font-size:22px;margin-bottom:6px}
+.sub{color:var(--gray);font-size:13px;margin-bottom:22px;line-height:1.7}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:0 2px 10px rgba(30,41,59,.06);margin-bottom:16px}
+.card h2{font-size:16px;margin-bottom:14px}
+.tbl{width:100%;border-collapse:collapse;font-size:13.5px}
+.tbl th{text-align:left;padding:8px 10px;background:#f8fafc;border-bottom:2px solid var(--border);color:var(--gray);font-weight:600}
+.tbl td{padding:9px 10px;border-bottom:1px solid #f1f5f9}
+.tbl tr:last-child td{border-bottom:none}
+.tag{display:inline-block;font-size:11px;padding:2px 9px;border-radius:10px;font-weight:700}
+.tag.me{background:#dcfce7;color:var(--green)}
+.tag.other{background:#fee2e2;color:var(--red)}
+.btn{display:inline-block;border:none;border-radius:10px;padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;transition:.15s}
+.btn.danger{background:var(--red);color:#fff}
+.btn.danger:hover{background:#dc2626}
+.btn.primary{background:var(--primary);color:#fff}
+.btn.ghost{background:#f1f5f9;color:var(--gray)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.notice{background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:10px;padding:12px 14px;font-size:13px;line-height:1.8;margin-bottom:16px}
+.ok-box{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;border-radius:10px;padding:14px;font-size:13.5px;line-height:1.9;display:none}
+.ok-box.show{display:block}
+.hint{color:var(--gray);font-size:12.5px;line-height:1.8;margin-top:10px}
+#result{font-size:13px;margin-top:12px;line-height:1.8}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>👥 账户管理</h1>
+  <div class="sub">管理本浏览器中的账户。删除多余账户并隔离「zhenghh02」的数据。</div>
+
+  <div class="notice">⚠️ <b>提示</b>：本页只操作<u>当前浏览器</u>的 localStorage。删除的账户数据无法恢复，请谨慎操作。</div>
+
+  <div class="card">
+    <h2>📋 当前账户列表</h2>
+    <table class="tbl">
+      <thead><tr><th>用户名</th><th>注册时间</th><th>状态</th></tr></thead>
+      <tbody id="userList"></tbody>
+    </table>
+    <div class="hint" id="noZhenghh" style="display:none;color:var(--red);font-weight:700">
+      ⚠️ 未找到「zhenghh02」账户！请先<a href="login.html" style="color:var(--primary)">去登录页注册 zhenghh02</a>，再回来清理。
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>🗑️ 清理操作</h2>
+    <p style="font-size:13.5px;color:var(--gray);margin-bottom:12px">
+      点击下方按钮将：<br>
+      ① 删除除 <b>zhenghh02</b> 外所有账户（张三、test、A用户、B用户…）<br>
+      ② 清除这些账户的投递/测评/面试/Offer 数据<br>
+      ③ 保留 zhenghh02 的数据并设为当前登录
+    </p>
+    <button class="btn danger" id="cleanBtn" onclick="cleanOthers()">🗑️ 删除其他账户（保留 zhenghh02）</button>
+    <div class="ok-box" id="okBox"></div>
+    <div id="result"></div>
+  </div>
+
+  <div class="card">
+    <a class="btn ghost" href="index.html">← 返回首页</a>
+    <a class="btn primary" href="login.html" style="margin-left:8px">🔑 登录页</a>
+  </div>
+</div>
+
+<script src="auth.js"></script>
+<script>
+const KEEP = 'zhenghh02';
+
+function render(){
+  const users = Auth.getUsers();
+  const tbody = document.getElementById('userList');
+  const me = Auth.currentUser();
+  if(!users.length){
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--gray);padding:16px">暂无账户，请先注册</td></tr>';
+  } else {
+    tbody.innerHTML = users.map(u=>{
+      const isKeep = u.username === KEEP;
+      const isMe = me && me.uid === u.uid;
+      return `<tr>
+        <td><b>${esc(u.username)}</b>${isMe?' <span style="font-size:11px;color:var(--gray)">(当前登录)</span>':''}</td>
+        <td>${esc(u.createdAt||'--')}</td>
+        <td>${isKeep?'<span class="tag me">保留</span>':'<span class="tag other">待删除</span>'}</td>
+      </tr>`;
+    }).join('');
+  }
+  const hasKeep = users.some(u=>u.username === KEEP);
+  document.getElementById('noZhenghh').style.display = hasKeep ? 'none' : 'block';
+  document.getElementById('cleanBtn').disabled = !hasKeep;
+  if(!hasKeep){ document.getElementById('cleanBtn').textContent = '⚠️ 请先注册 zhenghh02'; }
+}
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function cleanOthers(){
+  const users = Auth.getUsers();
+  const keep = users.find(u=>u.username === KEEP);
+  if(!keep){ alert('未找到 zhenghh02 账户，请先注册'); return; }
+  if(!confirm('确定删除除 zhenghh02 外的所有账户及其数据？此操作不可恢复！')) return;
+
+  const btn = document.getElementById('cleanBtn');
+  btn.disabled = true; btn.textContent = '清理中…';
+
+  const removed = [];
+  users.forEach(u=>{
+    if(u.username === KEEP) return;
+    removed.push(u.username);
+    // 删除该用户的数据 key
+    ['qiuzhao27_track_v1','qiuzhao27_entries_v1','qiuzhao27_mail_processed_v1'].forEach(base=>{
+      try{ localStorage.removeItem(base + '_' + u.uid); }catch(e){}
+    });
+  });
+
+  // 更新用户列表：只保留 zhenghh02
+  const newUsers = users.filter(u=>u.username === KEEP);
+  localStorage.setItem('qiuzhao27_users_v1', JSON.stringify(newUsers));
+
+  // 设 zhenghh02 为当前登录（单独隔离）
+  localStorage.setItem('qiuzhao27_session_v1', JSON.stringify({
+    uid: keep.uid, username: keep.username, loginAt: Date.now()
+  }));
+
+  const ok = document.getElementById('okBox');
+  ok.innerHTML = `✅ <b>清理完成！</b><br>
+    已删除账户：${removed.length ? removed.map(esc).join('、') : '（无）'}<br>
+    已保留：<b>zhenghh02</b>（数据独立隔离，已设为当前登录）<br>
+    <a href="index.html" style="color:var(--primary);font-weight:700">→ 进入 zhenghh02 的看板</a>`;
+  ok.classList.add('show');
+
+  render();
+  btn.disabled = false; btn.textContent = '🗑️ 删除其他账户（保留 zhenghh02）';
+}
+
+render();
+</script>
+</body>
+</html>
