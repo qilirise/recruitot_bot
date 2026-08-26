@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>登录 · 27秋招</title>
+<style>
+:root{
+  --primary:#3b6ef6; --primary-dark:#2a56d0; --primary-light:#e8effe;
+  --bg:#eef2fa; --card:#fff; --border:#e3e8f0;
+  --text:#1e293b; --gray:#64748b; --red:#dc2626; --green:#16a34a;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"PingFang SC","Microsoft YaHei",-apple-system,sans-serif;background:linear-gradient(135deg,#3b6ef6 0%,#6d8ff8 50%,#9db4f8 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.auth-wrap{width:100%;max-width:420px}
+.logo-box{text-align:center;color:#fff;margin-bottom:22px}
+.logo-box .icon{font-size:46px;display:block;margin-bottom:6px}
+.logo-box h1{font-size:22px;font-weight:800;letter-spacing:1px;text-shadow:0 2px 8px rgba(0,0,0,.15)}
+.logo-box p{font-size:13px;opacity:.9;margin-top:4px}
+.card{background:var(--card);border-radius:18px;box-shadow:0 20px 50px rgba(15,23,42,.25);padding:30px 30px 26px}
+.tabs{display:flex;background:#f1f5f9;border-radius:11px;padding:4px;margin-bottom:22px}
+.tabs button{flex:1;border:none;background:transparent;padding:9px 0;border-radius:8px;font-size:14px;font-weight:700;color:var(--gray);cursor:pointer;transition:.15s}
+.tabs button.active{background:#fff;color:var(--primary);box-shadow:0 2px 6px rgba(30,41,59,.1)}
+.form{display:none}
+.form.show{display:block}
+.row{margin-bottom:14px}
+.row label{display:block;font-size:12px;color:var(--gray);margin-bottom:5px;font-weight:600}
+.row input{width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;outline:none;transition:.15s;font-family:inherit}
+.row input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(59,110,246,.13)}
+.btn-main{width:100%;border:none;background:var(--primary);color:#fff;padding:11px 0;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;transition:.15s;margin-top:4px}
+.btn-main:hover{background:var(--primary-dark);transform:translateY(-1px)}
+.msg{font-size:12.5px;margin-top:10px;min-height:18px;text-align:center}
+.msg.err{color:var(--red)}
+.msg.ok{color:var(--green)}
+.tip{margin-top:16px;padding-top:14px;border-top:1px dashed var(--border);font-size:12px;color:var(--gray);line-height:1.8;text-align:center}
+.tip a{color:var(--primary);text-decoration:none;font-weight:600}
+.foot{text-align:center;color:rgba(255,255,255,.85);font-size:12px;margin-top:18px;line-height:1.8}
+</style>
+</head>
+<body>
+<div class="auth-wrap">
+  <div class="logo-box">
+    <span class="icon">🚀</span>
+    <h1>27届秋招日报</h1>
+    <p>登录后管理你的投递 · 测评 · 面试 · Offer</p>
+  </div>
+
+  <div class="card">
+    <div class="tabs">
+      <button id="tabLogin" class="active" onclick="switchTab('login')">登 录</button>
+      <button id="tabReg" onclick="switchTab('reg')">注 册</button>
+    </div>
+
+    <!-- 登录 -->
+    <div class="form show" id="formLogin">
+      <div class="row"><label>用户名</label><input type="text" id="loginName" placeholder="输入用户名" autocomplete="username"></div>
+      <div class="row"><label>密码</label><input type="password" id="loginPwd" placeholder="输入密码" autocomplete="current-password"></div>
+      <button class="btn-main" onclick="doLogin()">登 录</button>
+      <div class="msg" id="loginMsg"></div>
+    </div>
+
+    <!-- 注册 -->
+    <div class="form" id="formReg">
+      <div class="row"><label>用户名</label><input type="text" id="regName" placeholder="2-20位 中文/字母/数字/下划线" autocomplete="username"></div>
+      <div class="row"><label>密码</label><input type="password" id="regPwd" placeholder="至少 4 位" autocomplete="new-password"></div>
+      <div class="row"><label>确认密码</label><input type="password" id="regPwd2" placeholder="再次输入密码" autocomplete="new-password"></div>
+      <button class="btn-main" onclick="doRegister()">注册并登录</button>
+      <div class="msg" id="regMsg"></div>
+    </div>
+
+    <div class="tip">
+      数据保存在本浏览器中，每个账户独立。<br>
+      已有投递信息？首次注册会自动迁移到你的账户。
+    </div>
+  </div>
+
+  <div class="foot">27秋招日报 · 数据每日自动更新 · 支持多账户</div>
+</div>
+
+<script src="auth.js"></script>
+<script>
+function $(id){ return document.getElementById(id); }
+function switchTab(t){
+  $('tabLogin').classList.toggle('active', t==='login');
+  $('tabReg').classList.toggle('active', t==='reg');
+  $('formLogin').classList.toggle('show', t==='login');
+  $('formReg').classList.toggle('show', t==='reg');
+  $('loginMsg').textContent=''; $('regMsg').textContent='';
+}
+function msg(el, text, ok){ el.textContent=text; el.className='msg '+(ok?'ok':'err'); }
+
+function doLogin(){
+  const name=$('loginName').value, pwd=$('loginPwd').value;
+  const r = Auth.login(name, pwd);
+  if(r.ok){ msg($('loginMsg'), '登录成功，正在进入…', true); setTimeout(()=>location.href='index.html', 400); }
+  else msg($('loginMsg'), r.msg, false);
+}
+function doRegister(){
+  const name=$('regName').value, pwd=$('regPwd').value, pwd2=$('regPwd2').value;
+  if(pwd!==pwd2){ msg($('regMsg'), '两次密码不一致', false); return; }
+  const r = Auth.register(name, pwd);
+  if(r.ok){ msg($('regMsg'), '注册成功，正在进入…', true); setTimeout(()=>location.href='index.html', 400); }
+  else msg($('regMsg'), r.msg, false);
+}
+// Enter key submits
+document.addEventListener('keydown', e=>{
+  if(e.key!=='Enter') return;
+  const onLogin = $('formLogin').classList.contains('show');
+  onLogin ? doLogin() : doRegister();
+});
+// 已登录则直接进入
+if(Auth.currentUser()){ location.href='index.html'; }
+</script>
+</body>
+</html>

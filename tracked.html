@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>已投递公司追踪 · 27秋招</title>
+<style>
+:root{
+  --bg:#f4f6fb; --card:#ffffff; --border:#e3e8f0;
+  --primary:#3b6ef6; --primary-dark:#2a56d0; --primary-light:#e8effe;
+  --green:#16a34a; --green-bg:#e6f6ec;
+  --red:#dc2626; --red-bg:#fdeaea;
+  --amber:#d97706; --amber-bg:#fdf3e3;
+  --purple:#7c3aed; --purple-bg:#f1eafd;
+  --gray:#64748b; --text:#1e293b;
+  --shadow:0 1px 3px rgba(30,41,59,.08),0 4px 14px rgba(30,41,59,.06);
+  --radius:12px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"PingFang SC","Microsoft YaHei",-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+.wrap{max-width:1280px;margin:0 auto;padding:16px 20px 60px}
+
+header{background:linear-gradient(135deg,#16a34a 0%,#0d9488 55%,#0891b2 100%);border-radius:16px;padding:20px 26px;color:#fff;box-shadow:var(--shadow);position:relative;overflow:hidden}
+header::after{content:"📮";position:absolute;right:24px;top:14px;font-size:52px;opacity:.3;transform:rotate(-10deg)}
+header h1{font-size:22px;font-weight:700}
+header .sub{margin-top:5px;font-size:13px;opacity:.92}
+.header-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:13px}
+.badge{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);padding:5px 12px;border-radius:20px;font-size:12.5px}
+.header-btn{background:#fff;color:#0d9488;border:none;padding:7px 16px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;transition:.15s;box-shadow:0 2px 6px rgba(0,0,0,.12);text-decoration:none;display:inline-block}
+.header-btn:hover{transform:translateY(-1px)}
+.header-btn.ghost{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.55)}
+.header-btn.ghost:hover{background:rgba(255,255,255,.15)}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:16px}
+.stat{background:var(--card);border-radius:var(--radius);padding:13px 16px;box-shadow:var(--shadow);border:1px solid var(--border)}
+.stat .num{font-size:25px;font-weight:800;line-height:1.2}
+.stat .num.green{color:var(--green)} .stat .num.purple{color:var(--purple)} .stat .num.amber{color:var(--amber)} .stat .num.red{color:var(--red)}
+.stat .lbl{font-size:12px;color:var(--gray);margin-top:2px}
+
+.filters{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;box-shadow:var(--shadow);display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:16px}
+.filters input[type=text]{flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;outline:none}
+.filters input[type=text]:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(59,110,246,.12)}
+.filters select{padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:#fff;outline:none;cursor:pointer}
+.filters .seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.filters .seg button{padding:8px 14px;border:none;background:#fff;font-size:12.5px;cursor:pointer;color:var(--gray);font-weight:600}
+.filters .seg button.active{background:var(--primary);color:#fff}
+.count-note{font-size:12px;color:var(--gray)}
+
+.table-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);margin-top:12px;overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{position:sticky;top:0;background:#f8fafc;color:var(--gray);font-weight:600;font-size:12px;text-align:left;padding:10px 12px;border-bottom:2px solid var(--border);white-space:nowrap;z-index:2}
+tbody td{padding:10px 12px;border-bottom:1px solid #eef2f7;vertical-align:top;line-height:1.5}
+tbody tr:hover{background:#f8faff}
+td .co-name{font-weight:700}
+td .co-sub{font-size:11px;color:var(--gray);margin-top:2px}
+.job-cell{max-width:250px;font-size:12.5px}
+.url-list a{color:var(--primary);text-decoration:none;font-size:12px;word-break:break-all}
+.url-list a:hover{text-decoration:underline}
+.code-chip{display:inline-block;background:var(--amber-bg);color:var(--amber);font-size:11px;padding:2px 8px;border-radius:6px;margin-top:3px;font-weight:600}
+.ind-tag{display:inline-block;background:#f1f5f9;color:var(--gray);font-size:11px;padding:2px 8px;border-radius:6px;margin:2px 2px 0 0}
+.batch-tag{display:inline-block;background:var(--purple-bg);color:var(--purple);font-size:11px;padding:2px 8px;border-radius:6px}
+.deadline{font-size:12px}
+.deadline.warn{color:var(--red);font-weight:700}
+
+.track{display:flex;flex-direction:column;gap:5px;min-width:150px}
+.tk{display:flex;align-items:center;gap:6px}
+.tk .tk-btn{border:1px solid var(--border);background:#fff;border-radius:7px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:600;color:var(--gray);transition:.13s;white-space:nowrap}
+.tk .tk-btn:hover{border-color:var(--primary);color:var(--primary)}
+.tk .tk-btn.on-green{background:var(--green-bg);border-color:var(--green);color:var(--green)}
+.tk .tk-btn.on-amber{background:var(--amber-bg);border-color:var(--amber);color:var(--amber)}
+.tk .tk-btn.on-purple{background:var(--purple-bg);border-color:var(--purple);color:var(--purple)}
+.tk .tk-btn.on-red{background:var(--red-bg);border-color:var(--red);color:var(--red)}
+.tk .tk-label{font-size:11px;color:var(--gray);width:28px;flex-shrink:0}
+.itv-row{display:flex;gap:4px;flex-wrap:wrap}
+.itv-chip{border:1px solid var(--border);background:#fff;border-radius:7px;padding:3px 9px;font-size:12px;cursor:pointer;font-weight:600;color:var(--gray);transition:.13s}
+.itv-chip:hover{border-color:var(--purple);color:var(--purple)}
+.itv-chip.on{border-color:var(--purple);background:var(--purple-bg);color:var(--purple)}
+.itv-chip.done{background:var(--green-bg);border-color:var(--green);color:var(--green)}
+.itv-time{margin-top:6px;font-size:11.5px;color:var(--primary-dark);background:var(--primary-light);padding:4px 8px;border-radius:6px;display:none;line-height:1.5}
+.itv-time.show{display:block}
+.itv-edit{margin-top:6px;display:none;flex-direction:column;gap:6px;background:#f8faff;border:1px dashed var(--primary);border-radius:8px;padding:8px;width:190px}
+.itv-edit.show{display:flex}
+.itv-edit input[type=datetime-local],.itv-edit input[type=text]{border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;outline:none;width:100%}
+.itv-edit .btns{display:flex;gap:6px}
+.itv-edit .btns button{flex:1;border:none;border-radius:6px;padding:5px 0;font-size:12px;cursor:pointer;font-weight:600}
+.itv-edit .btns .save{background:var(--primary);color:#fff}
+.itv-edit .btns .cancel{background:#f1f5f9;color:var(--gray)}
+.itv-edit .btns .clear{background:var(--red-bg);color:var(--red)}
+.offer-btn{border:1px solid var(--border);background:#fff;border-radius:7px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:600;color:var(--gray);transition:.13s}
+.offer-btn.win{background:var(--green-bg);border-color:var(--green);color:var(--green)}
+.offer-btn.lose{background:var(--red-bg);border-color:var(--red);color:var(--red)}
+
+.empty{text-align:center;padding:56px 20px;color:var(--gray)}
+.empty .big{font-size:42px;margin-bottom:10px}
+.empty .link{color:var(--primary);font-weight:600;text-decoration:none}
+
+#toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(80px);background:#1e293b;color:#fff;padding:10px 22px;border-radius:10px;font-size:13px;opacity:0;transition:.3s;z-index:99;box-shadow:0 6px 20px rgba(0,0,0,.25);pointer-events:none}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+footer{margin-top:30px;text-align:center;font-size:12px;color:var(--gray);line-height:1.8}
+/* assess link */
+.assess-box{margin-top:5px;display:flex;flex-direction:column;gap:4px;width:200px}
+.assess-link{font-size:12px;color:var(--primary);text-decoration:none;word-break:break-all;background:var(--primary-light);padding:3px 8px;border-radius:6px;display:inline-block}
+.assess-dl{font-size:11.5px;color:var(--gray)}
+.assess-dl.urgent{color:var(--red);font-weight:700}
+.assess-dl.soon{color:var(--amber);font-weight:600}
+.assess-edit{margin-top:6px;display:none;flex-direction:column;gap:6px;background:#fffdf5;border:1px dashed var(--amber);border-radius:8px;padding:8px;width:210px}
+.assess-edit.show{display:flex}
+.assess-edit input[type=url],.assess-edit input[type=date]{border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;outline:none;width:100%}
+.assess-edit .btns{display:flex;gap:6px}
+.assess-edit .btns button{flex:1;border:none;border-radius:6px;padding:5px 0;font-size:12px;cursor:pointer;font-weight:600}
+.assess-edit .btns .save{background:var(--amber);color:#fff}
+.assess-edit .btns .clear{background:var(--red-bg);color:var(--red)}
+.assess-edit .btns .cancel{background:#f1f5f9;color:var(--gray)}
+/* custom company modal */
+.modal-mask{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+.modal-mask.show{display:flex}
+.modal{background:#fff;border-radius:16px;max-width:460px;width:100%;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.modal h3{font-size:16px;margin-bottom:14px}
+.modal .row{margin-bottom:12px}
+.modal .row label{font-size:12px;color:var(--gray);display:block;margin-bottom:4px}
+.modal .row input{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;outline:none}
+.modal .row input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(59,110,246,.12)}
+.modal .row .hint{font-size:11px;color:var(--gray);margin-top:3px}
+.modal .btns{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
+.modal .btns button{border:none;border-radius:8px;padding:9px 22px;font-size:13px;cursor:pointer;font-weight:700}
+.modal .btns .ok{background:var(--primary);color:#fff}
+.modal .btns .ok:hover{background:var(--primary-dark)}
+.modal .btns .no{background:#f1f5f9;color:var(--gray)}
+.cust-tag{display:inline-block;background:var(--primary-light);color:var(--primary);font-size:10px;padding:1px 7px;border-radius:8px;margin-left:6px;font-weight:600;vertical-align:middle}
+@media(max-width:900px){ .table-card{overflow-x:auto} table{min-width:1080px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>📮 已投递公司追踪</h1>
+    <div class="sub">你标记过「已投递」的公司都在这里 · 按行业筛选 · 进度状态与首页实时同步</div>
+    <div class="header-row">
+      <span class="badge" id="countBadge">🏢 已投递：0 家</span>
+      <a class="header-btn ghost" href="index.html">← 返回首页</a>
+      <button class="header-btn ghost" onclick="window.location.reload()">🔄 刷新</button>
+      <span class="badge" id="userBadge">👤 --</span>
+      <button class="header-btn ghost" onclick="doLogout()">🚪 退出</button>
+    </div>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><div class="num green" id="stTotal">0</div><div class="lbl">已投递公司</div></div>
+    <div class="stat"><div class="num amber" id="stAssess">0</div><div class="lbl">已测评</div></div>
+    <div class="stat"><div class="num purple" id="stItv">0</div><div class="lbl">面试中</div></div>
+    <div class="stat"><div class="num" id="stOffer">0</div><div class="lbl">已Offer</div></div>
+    <div class="stat"><div class="num red" id="stLose">0</div><div class="lbl">挂了</div></div>
+  </div>
+
+  <div class="filters">
+    <select id="filterIndustry"><option value="all">🏭 全部行业</option></select>
+    <select id="filterStage"><option value="all">🚦 全部阶段</option><option value="assess">已测评</option><option value="itv">面试中</option><option value="offered">已Offer</option><option value="rejected">挂了</option></select>
+    <input type="text" id="searchInput" placeholder="🔍 搜索公司名 / 岗位 / 地点…">
+    <span class="count-note" id="countNote"></span>
+  </div>
+
+  <div class="table-card">
+    <table>
+      <thead>
+        <tr>
+          <th style="min-width:120px">公司</th>
+          <th style="min-width:170px">招聘岗位</th>
+          <th style="min-width:130px">行业 / 地点</th>
+          <th style="min-width:110px">批次 / 截止</th>
+          <th style="min-width:150px">投递链接 / 内推码</th>
+          <th style="min-width:170px">📮 进度追踪（点击操作）</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+  <footer>
+    状态与首页共享，修改后两边自动同步 · 数据来源：<a href="https://docs.qq.com/smartsheet/DTkRMUVhoUWJXZEhJ" target="_blank" style="color:var(--primary)">27届秋招信息汇总</a>
+  </footer>
+</div>
+<div id="toast"></div>
+
+<!-- 创建投递公司模态框 -->
+<div class="modal-mask" id="entryModal">
+  <div class="modal">
+    <h3>➕ 创建投递公司</h3>
+    <div class="row">
+      <label>公司名称 *</label>
+      <input type="text" id="entryName" placeholder="如：某某科技有限公司">
+      <div class="hint">该表格中没有这家公司，创建后将出现在你的已投递列表中</div>
+    </div>
+    <div class="row">
+      <label>官网链接 *</label>
+      <input type="url" id="entryUrl" placeholder="https://www.company.com/">
+      <div class="hint">公司官网 / 投递官网地址</div>
+    </div>
+    <div class="btns">
+      <button class="no" onclick="closeEntryModal()">取消</button>
+      <button class="ok" onclick="saveEntry()">创建并加入投递</button>
+    </div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script src="applied_sites.js"></script>
+<script src="auth.js"></script>
+<script>
+/* ============ 登录检查 ============ */
+(function guardLogin(){
+  const u = Auth.currentUser();
+  if(!u){ location.href = 'login.html'; return; }
+  window.CURRENT_USER = u;
+})();
+
+const DATA = window.QIUZHAO_DATA || null;
+const ALL_RECORDS = [];
+if(DATA){ DATA.tabs.forEach(t=>t.records.forEach(r=>ALL_RECORDS.push(r))); }
+const STORE_KEY = Auth.userKey('qiuzhao27_track_v1');
+let track = {};
+try{ track = JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }catch(e){ track = {}; }
+
+/* 书签导入：把 Edge「找工作!/官网」中匹配到的公司标记为已投递（不覆盖用户手动取消的） */
+(function importAppliedSites(){
+  const sites = window.APPLIED_SITES;
+  if(!sites || !Array.isArray(sites.applied) || !sites.applied.length) return;
+  const existedIds = new Set(Object.keys(track)); // ids already in localStorage (user-set)
+  let imported = 0;
+  sites.applied.forEach(s=>{
+    if(!s || !s.id) return;
+    if(!track[s.id]) track[s.id]={applied:false,assess:false,itv:{},offer:'active'};
+    if(existedIds.has(s.id) && track[s.id].applied === false){
+      // 用户曾手动取消投递 -> 尊重用户
+      track[s.id]._imported=true;
+    } else {
+      track[s.id].applied=true;
+      track[s.id]._imported=true;
+      imported++;
+    }
+  });
+  if(imported>0){ saveTrack(); }
+})();
+
+function saveTrack(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(track)); }catch(e){} }
+function getRec(rid){ if(!track[rid]) track[rid]={applied:false,assess:false,itv:{},offer:'active'}; return track[rid]; }
+
+function esc(s){ if(s==null) return ''; return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function fmtTime(ts){ if(!ts) return ''; const d=new Date(ts); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),1500); }
+function allUrls(v){ if(!Array.isArray(v)) return []; return v.filter(x=>x&&x.url); }
+
+/* 已投递记录 = 本地 track 中 applied=true 的公司 */
+const ENTRY_KEY = Auth.userKey('qiuzhao27_entries_v1');
+let entries = [];  // [{id, name, url, tracked, createdAt}]  tracked:true 表示创建投递公司
+try{ entries = JSON.parse(localStorage.getItem(ENTRY_KEY)) || []; }catch(e){ entries = []; }
+function saveEntries(){ try{ localStorage.setItem(ENTRY_KEY, JSON.stringify(entries)); }catch(e){} }
+
+/* 自定义投递公司 -> 虚拟 record（与表格记录同结构，便于复用渲染） */
+function customRecords(){
+  return entries.filter(e=>e.tracked).map(e=>({
+    id: e.id,
+    custom: true,
+    v: {
+      '公司名称': e.name,
+      '招聘岗位': '自定义公司',
+      '工作地点': '—',
+      '行业': '自定义',
+      '批次': '自定义投递',
+      '更新日期': (e.createdAt||'').slice(0,10),
+      '投递链接': [{text: e.url, url: e.url}],
+      '招聘截止日期': '',
+      '备注': ''
+    }
+  }));
+}
+function appliedRows(){
+  const t = ALL_RECORDS.filter(r=>{ const st=track[r.id]; return st && st.applied; });
+  const c = customRecords().filter(r=>{ const st=track[r.id]; return !st || st.applied!==false; });
+  return t.concat(c);
+}
+
+/* ---- 创建投递公司 ---- */
+function openEntryModal(){
+  document.getElementById('entryName').value = document.getElementById('searchInput').value.trim() || '';
+  document.getElementById('entryUrl').value = '';
+  document.getElementById('entryModal').classList.add('show');
+  setTimeout(()=>document.getElementById('entryName').focus(), 50);
+}
+function closeEntryModal(){ document.getElementById('entryModal').classList.remove('show'); }
+document.addEventListener('DOMContentLoaded', ()=>{
+  const mask=document.getElementById('entryModal');
+  if(mask) mask.addEventListener('click', e=>{ if(e.target.id==='entryModal') closeEntryModal(); });
+});
+function saveEntry(){
+  const name = document.getElementById('entryName').value.trim();
+  let url = document.getElementById('entryUrl').value.trim();
+  if(!name){ toast('请填写公司名称'); return; }
+  if(!url){ toast('请填写官网链接'); return; }
+  if(!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  // 去重：同名公司存在则提示
+  const dup = entries.find(e=>e.name===name);
+  if(dup){ toast('「'+name+'」已存在词条中'); return; }
+  const id = 'en_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+  const entry = { id, name, url, tracked: true, createdAt: new Date().toLocaleString('zh-CN',{hour12:false}) };
+  entries.unshift(entry);
+  saveEntries();
+  // 同时写入 track：标记已投递
+  track[id] = {applied:true, assess:false, itv:{}, offer:'active'};
+  saveTrack();
+  closeEntryModal();
+  collectIndustries();
+  renderAll();
+  toast('✅ 已创建投递公司：'+name);
+}
+
+/* ---- 交互（与首页同 key，实时同步） ---- */
+function toggleAssess(rid,btn){
+  const st=getRec(rid); st.assess=!st.assess;
+  btn.classList.toggle('on-amber',st.assess); btn.textContent=st.assess?'📝 已测评':'⬜ 未测评';
+  saveTrack(); renderAll(); toast(st.assess?'已标记测评':'已取消测评');
+}
+/* assess link & deadline */
+function assessCell(rid){
+  const st=getRec(rid);
+  const link=st.assessLink||''; const dl=st.assessDeadline||'';
+  const today=(()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
+  const urgent = dl && dl < today;
+  const soon = dl && dl >= today && dl <= (()=>{const d=new Date();d.setDate(d.getDate()-3);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
+  let box='';
+  if(link||dl){
+    box+='<div class="assess-box">';
+    if(link) box+=`<a class="assess-link" href="${esc(link)}" target="_blank" rel="noopener" title="${esc(link)}">🔗 测评链接</a>`;
+    if(dl) box+=`<span class="assess-dl ${urgent?'urgent':soon?'soon':''}">⏰ 截止：${esc(dl)}${urgent?'（已过期！）':soon?'（即将到期！）':''}</span>`;
+    box+='</div>';
+  }
+  return box+`<div class="assess-edit" id="assessEdit_${rid}"></div>`;
+}
+function openAssessEdit(rid,btn){
+  const st=getRec(rid);
+  const box=document.getElementById('assessEdit_'+rid); if(!box) return;
+  box.className='assess-edit show';
+  box.innerHTML=`
+    <input type="url" id="assessL_${rid}" value="${esc(st.assessLink||'')}" placeholder="粘贴测评链接（https://…）">
+    <input type="date" id="assessD_${rid}" value="${esc(st.assessDeadline||'')}" placeholder="测评截止日期">
+    <div class="btns">
+      <button class="save" onclick="saveAssess('${rid}')">保存</button>
+      <button class="clear" onclick="clearAssess('${rid}')">清空</button>
+      <button class="cancel" onclick="cancelAssess('${rid}')">收起</button>
+    </div>`;
+  box.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function saveAssess(rid){
+  const st=getRec(rid);
+  const link=document.getElementById('assessL_'+rid).value.trim();
+  const dl=document.getElementById('assessD_'+rid).value;
+  if(link) st.assessLink=link; else delete st.assessLink;
+  if(dl) st.assessDeadline=dl; else delete st.assessDeadline;
+  saveTrack(); renderAll(); toast('测评信息已保存 ✅');
+}
+function clearAssess(rid){
+  const st=getRec(rid);
+  delete st.assessLink; delete st.assessDeadline;
+  saveTrack(); renderAll(); toast('已清空测评信息');
+}
+function cancelAssess(rid){ const box=document.getElementById('assessEdit_'+rid); if(box) box.className='assess-edit'; }
+function toggleOffer(rid,btn){
+  const st=getRec(rid); const seq=['active','offered','rejected'];
+  let i=seq.indexOf(st.offer); i=(i+1)%seq.length; st.offer=seq[i];
+  saveTrack(); renderAll();
+  toast(st.offer==='offered'?'恭喜！已标记 Offer 🎉':st.offer==='rejected'?'已标记挂了':'重置为进行中');
+}
+function toggleApplied(rid,btn){
+  const st=getRec(rid); st.applied=!st.applied;
+  saveTrack(); renderAll(); toast(st.applied?'已标记投递':'已取消投递（刷新后不再被书签自动标记）');
+}
+function itvChip(rid,stage){
+  const st=getRec(rid); const it=st.itv[stage]||{};
+  const has=!!it.time; const done=!!it.done;
+  const label={1:'一面',2:'二面',3:'三面'}[stage];
+  return `<button class="itv-chip ${done?'done':has?'on':''}" onclick="openItvEdit('${rid}',${stage})">${done?'✅ ':''}${label}${has&&!done?' ✓':''}</button>`;
+}
+function itvCell(rid){
+  const st=getRec(rid); const it=st.itv||{};
+  const parts=[];
+  for(let s=1;s<=3;s++){ const t=it[s]; if(t&&t.time) parts.push({stage:s,time:t.time,note:t.note||'',done:!!t.done}); }
+  const html=parts.map(p=>`<div class="itv-time show" style="cursor:pointer" title="点击标记/取消完成" onclick="toggleItvDone('${rid}',${p.stage})">${p.done?'✅':'📅'} 第${'一二三'[p.stage-1]}面：${fmtTime(p.time)}${p.note?' · '+esc(p.note):''}</div>`).join('');
+  return `<div class="itv-row">${[1,2,3].map(s=>itvChip(rid,s)).join('')}</div>
+          <div class="itv-edit" id="itvEdit_${rid}"></div>${html}`;
+}
+function openItvEdit(rid,stage){
+  const st=getRec(rid); const it=st.itv[stage]||{time:'',note:'',done:false};
+  const box=document.getElementById('itvEdit_'+rid); if(!box) return;
+  const d = it.time ? new Date(it.time) : null;
+  const localVal = d ? new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,16) : '';
+  box.className='itv-edit show';
+  box.innerHTML=`
+    <input type="datetime-local" id="itvT_${rid}_${stage}" value="${localVal}">
+    <input type="text" id="itvN_${rid}_${stage}" value="${esc(it.note||'')}" placeholder="备注" maxlength="60">
+    <div class="btns">
+      <button class="save" onclick="saveItv('${rid}',${stage})">保存</button>
+      <button class="clear" onclick="clearItv('${rid}',${stage})">清除</button>
+      <button class="cancel" onclick="cancelItv('${rid}')">收起</button>
+    </div>`;
+  box.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function saveItv(rid,stage){
+  const t=document.getElementById(`itvT_${rid}_${stage}`).value;
+  const n=document.getElementById(`itvN_${rid}_${stage}`).value.trim();
+  const st=getRec(rid); if(!st.itv) st.itv={};
+  if(t){ st.itv[stage]={time:new Date(t).getTime(), note:n, done: st.itv[stage]?!!st.itv[stage].done:false}; }
+  else if(n){ st.itv[stage]={time:'', note:n, done:false}; }
+  saveTrack(); renderAll(); toast('面试安排已保存 📅');
+}
+function clearItv(rid,stage){
+  const st=getRec(rid); if(st.itv) delete st.itv[stage];
+  saveTrack(); renderAll(); toast('已清除该轮面试');
+}
+function cancelItv(rid){ const box=document.getElementById('itvEdit_'+rid); if(box) box.className='itv-edit'; }
+function toggleItvDone(rid,stage){
+  const st=getRec(rid); if(!st.itv||!st.itv[stage]) return;
+  st.itv[stage].done=!st.itv[stage].done;
+  saveTrack(); renderAll(); toast(st.itv[stage].done?'标记该轮完成 ✅':'取消完成标记');
+}
+
+/* ---- 退出登录 ---- */
+function doLogout(){
+  Auth.logout();
+  toast('已退出登录');
+  setTimeout(()=>location.href='login.html', 500);
+}
+
+/* ---- 渲染 ---- */
+function collectIndustries(){
+  const set=new Set();
+  appliedRows().forEach(r=>{ if(r.v['行业']) set.add(r.v['行业']); });
+  const sel=document.getElementById('filterIndustry');
+  sel.innerHTML='<option value="all">🏭 全部行业</option>'+[...set].sort().map(i=>`<option value="${esc(i)}">${esc(i)}</option>`).join('');
+}
+function renderRow(r){
+  const v=r.v; const rid=r.id; const st=getRec(rid);
+  const urls=allUrls(v['投递链接']||v['投递链接or推文']);
+  const pub=allUrls(v['官方公告']);
+  const code=v['内推码']||'';
+  const today=todayStr();
+  const dl=v['招聘截止日期']||'';
+  const dlWarn = /招满即止/i.test(dl)? false : /20\d{2}-\d{2}-\d{2}/.test(dl) && dl < today;
+  const offerCls=st.offer==='offered'?'win':st.offer==='rejected'?'lose':'';
+  const offerTxt=st.offer==='offered'?'🏆 已Offer':st.offer==='rejected'?'❌ 挂了':'⏳ 进行中';
+  const urlHtml = urls.length ? `<div class="url-list">${urls.map(u=>`<a href="${esc(u.url)}" target="_blank" rel="noopener">🔗 ${esc(u.text)||'投递'}</a>`).join('')}</div>` : '<span style="color:#94a3b8">—</span>';
+  const pubHtml = pub.length ? `<div class="url-list" style="margin-top:3px">${pub.map(()=>`<a href="${esc(pub[0].url)}" target="_blank" rel="noopener">📄 公告</a>`).join('')}</div>` : '';
+  return `<tr data-rid="${rid}">
+    <td><div class="co-name">${esc(v['公司名称']||rid)}${r.custom?'<span class="cust-tag">自定义</span>':''}</div><div class="co-sub">更新于 ${esc(v['更新日期']||'—')}</div></td>
+    <td class="job-cell">${esc(v['招聘岗位']||'—')}</td>
+    <td>${v['行业']?`<span class="ind-tag">🏭 ${esc(v['行业'])}</span>`:''}<div style="margin-top:4px;font-size:12px;color:var(--gray)">📍 ${esc(v['工作地点']||'—')}</div></td>
+    <td>${v['批次']?`<span class="batch-tag">${esc(v['批次'])}</span>`:''}<div class="deadline ${dlWarn?'warn':''}" style="margin-top:4px">⏰ ${esc(dl)||'—'}</div></td>
+    <td>${urlHtml}${code?`<span class="code-chip">🎁 ${esc(code)}</span>`:''}${pubHtml}</td>
+    <td>
+      <div class="track">
+        <div class="tk" style="align-items:flex-start"><span class="tk-label">测评</span><div style="flex:1">
+          <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">
+            <button class="tk-btn ${st.assess?'on-amber':''}" onclick="toggleAssess('${rid}',this)">${st.assess?'📝 已测评':'⬜ 未测评'}</button>
+            <button class="mini-btn" onclick="openAssessEdit('${rid}',this)" style="color:var(--amber);border-color:#f0d9a8">🔗 测评链接</button>
+          </div>
+          ${assessCell(rid)}
+        </div></div>
+        <div class="tk" style="align-items:flex-start"><span class="tk-label" style="margin-top:4px">面试</span><div style="flex:1">${itvCell(rid)}</div></div>
+        <div class="tk"><span class="tk-label">Offer</span><button class="offer-btn ${offerCls}" onclick="toggleOffer('${rid}',this)">${offerTxt}</button></div>
+        <div class="tk"><span class="tk-label">投递</span><button class="tk-btn on-green" onclick="toggleApplied('${rid}',this)">✅ 已投递（点击取消）</button></div>
+      </div>
+    </td>
+  </tr>`;
+}
+function renderAll(){
+  const kw=document.getElementById('searchInput').value.trim().toLowerCase();
+  const fi=document.getElementById('filterIndustry').value;
+  const fs=document.getElementById('filterStage').value;
+  let rows=appliedRows();
+  rows=rows.filter(r=>{
+    const v=r.v; const st=getRec(r.id);
+    if(kw){ const hay=(v['公司名称']||'')+' '+(v['招聘岗位']||'')+' '+(v['工作地点']||'')+' '+(v['行业']||''); if(!hay.toLowerCase().includes(kw)) return false; }
+    if(fi!=='all'&&v['行业']!==fi) return false;
+    if(fs==='assess'&&!st.assess) return false;
+    if(fs==='itv'&&!Object.keys(st.itv||{}).length) return false;
+    if(fs==='offered'&&st.offer!=='offered') return false;
+    if(fs==='rejected'&&st.offer!=='rejected') return false;
+    return true;
+  });
+  // 按更新日期降序；自定义公司固定排最后
+  rows.sort((a,b)=>{
+    if(a.custom && !b.custom) return 1;
+    if(!a.custom && b.custom) return -1;
+    return (b.v['更新日期']||'').localeCompare(a.v['更新日期']||'');
+  });
+  const body=document.getElementById('tableBody');
+  const all=appliedRows().length;
+  document.getElementById('countBadge').textContent=`🏢 已投递：${all} 家`;
+  document.getElementById('stTotal').textContent=all;
+  document.getElementById('countNote').textContent=`当前显示 ${rows.length} / ${all} 家`;
+  if(!all){
+    body.innerHTML=`<tr><td colspan="6"><div class="empty"><div class="big">📭</div>还没有已投递的公司<br><br>
+      去首页把投递过的公司标记为「已投递」，或直接创建：<br><br>
+      <button class="header-btn" style="background:var(--primary);color:#fff;border:none" onclick="openEntryModal()">➕ 创建投递公司</button>
+      <div style="margin-top:12px"><a class="link" href="index.html">← 返回首页标记</a></div>
+    </div></td></tr>`;
+    return;
+  }
+  if(!rows.length){
+    body.innerHTML=`<tr><td colspan="6"><div class="empty"><div class="big">🔍</div>没有找到符合条件的公司<br><br>
+      <button class="header-btn" style="background:var(--primary);color:#fff;border:none" onclick="openEntryModal()">➕ 创建投递公司</button>
+      <div style="font-size:12px;color:var(--gray);margin-top:10px">表格里没有这家公司？创建后即可加入已投递追踪</div>
+    </div></td></tr>`;
+    return;
+  }
+  body.innerHTML=rows.map(renderRow).join('');
+  // stats
+  let assess=0,itv=0,offer=0,lose=0;
+  appliedRows().forEach(r=>{ const st=getRec(r.id); if(st.assess) assess++; if(Object.keys(st.itv||{}).length) itv++; if(st.offer==='offered') offer++; if(st.offer==='rejected') lose++; });
+  document.getElementById('stAssess').textContent=assess;
+  document.getElementById('stItv').textContent=itv;
+  document.getElementById('stOffer').textContent=offer;
+  document.getElementById('stLose').textContent=lose;
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  const ub=document.getElementById('userBadge');
+  if(ub && window.CURRENT_USER) ub.textContent=`👤 ${window.CURRENT_USER.username}`;
+  collectIndustries();
+  renderAll();
+  document.getElementById('searchInput').addEventListener('input',renderAll);
+  document.getElementById('filterIndustry').addEventListener('change',renderAll);
+  document.getElementById('filterStage').addEventListener('change',renderAll);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+# 敏感配置（含密码/授权码/API Key，绝不推送到 GitHub）
+mail_config.json
+deepseek_config.json
+
+# 本地测试/临时文件
+.tmp/
+__pycache__/
+*.pyc
+*.log

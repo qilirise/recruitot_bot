@@ -1,0 +1,1 @@
+window.DEEPSEEK_USAGE = {"generatedAt": "2026-08-26 13:27:41", "configured": true, "error": "", "total": 86.17, "remaining": 81.94, "used": 4.23, "percent": 4.9, "currency": "CNY", "is_available": true, "total_set": false, "granted": 0.0, "topped_up": 81.94};
