@@ -262,6 +262,15 @@ header .sub{margin-top:6px;font-size:13px;opacity:.92}
 .new-card .nc-name{font-size:15px;font-weight:700;color:var(--primary-dark)}
 .new-card .nc-date{font-size:11px;background:var(--primary-light);color:var(--primary);padding:2px 8px;border-radius:10px;white-space:nowrap}
 .new-card .nc-batch{font-size:11px;background:var(--amber-bg);color:var(--amber);padding:2px 8px;border-radius:10px;margin-top:6px;display:inline-block}
+/* 测评链接条带输入 */
+.strip-wrap{display:flex;flex-direction:column;gap:6px;margin-bottom:6px}
+.strip-row{display:flex;gap:6px;align-items:center}
+.strip-row .strip-input{flex:1;min-width:0;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;outline:none}
+.strip-row .strip-input:focus{border-color:var(--primary)}
+.strip-add{background:var(--primary);color:#fff;border:none;border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:15px;font-weight:700;flex-shrink:0;line-height:1}
+.strip-add:hover{background:var(--primary-dark)}
+.strip-del{background:#f1f5f9;color:var(--gray);border:none;border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:13px;flex-shrink:0;line-height:1}
+.strip-del:hover{background:#fee2e2;color:var(--red)}
 /* 内推码优先展示（置顶高亮） */
 .new-card .nc-code{margin-top:8px;background:linear-gradient(90deg,#fff7ed,#ffedd5);border:1px dashed var(--amber);color:#92400e;font-size:12.5px;padding:5px 10px;border-radius:8px;font-weight:600}
 .new-card .nc-code b{color:#b45309;font-size:14px;letter-spacing:.5px}
@@ -911,8 +920,14 @@ function openAssessEdit(rid,btn){
   const st=getRec(rid);
   const box=document.getElementById('assessEdit_'+rid); if(!box) return;
   box.className='assess-edit show';
+  const links=getAssessLinks(st);
+  const initStrips=(links.length?links:['']).map((l,i)=>`<div class="strip-row">
+    <input type="url" class="strip-input" id="assessStrip_${rid}_${i}" value="${esc(l)}" placeholder="测评链接（https://…）">
+    <button class="strip-add" onclick="addAssessStrip('${rid}')" title="添加一条链接">＋</button>
+    <button class="strip-del" onclick="removeAssessStrip('${rid}',${i})" title="删除这一条">×</button>
+  </div>`).join('');
   box.innerHTML=`
-    <textarea id="assessL_${rid}" rows="3" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;outline:none" placeholder="粘贴测评链接，每行一个（支持多个）">${esc(getAssessLinks(st).join('\n'))}</textarea>
+    <div class="strip-wrap" id="assessStrips_${rid}">${initStrips}</div>
     <input type="date" id="assessD_${rid}" value="${esc(st.assessDeadline||'')}" placeholder="测评截止日期">
     <div class="btns">
       <button class="save" onclick="saveAssess('${rid}')">保存</button>
@@ -921,11 +936,33 @@ function openAssessEdit(rid,btn){
     </div>`;
   box.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
+/* ===== 测评链接条带：添加/删除（最多5条） ===== */
+function addAssessStrip(rid){
+  const wrap=document.getElementById('assessStrips_'+rid); if(!wrap) return;
+  const rows=wrap.querySelectorAll('.strip-row').length;
+  if(rows>=5){ toast('最多添加 5 个测评链接'); return; }
+  const i=rows;
+  const row=document.createElement('div');
+  row.className='strip-row';
+  row.innerHTML=`<input type="url" class="strip-input" id="assessStrip_${rid}_${i}" placeholder="测评链接（https://…）">
+    <button class="strip-add" onclick="addAssessStrip('${rid}')" title="添加一条链接">＋</button>
+    <button class="strip-del" onclick="removeAssessStrip('${rid}',${i})" title="删除这一条">×</button>`;
+  wrap.appendChild(row);
+  row.querySelector('input').focus();
+}
+function removeAssessStrip(rid,idx){
+  const wrap=document.getElementById('assessStrips_'+rid); if(!wrap) return;
+  const rows=wrap.querySelectorAll('.strip-row');
+  if(rows.length<=1){ toast('至少保留一条'); return; }
+  const row=rows[idx];
+  if(row) row.remove();
+}
 function saveAssess(rid){
   const st=getRec(rid);
-  const raw=document.getElementById('assessL_'+rid).value;
+  const wrap=document.getElementById('assessStrips_'+rid);
+  const vals=wrap?Array.from(wrap.querySelectorAll('.strip-input')).map(x=>x.value.trim()):[];
   const dl=document.getElementById('assessD_'+rid).value;
-  setAssessLinks(st, raw.split('\n'));
+  setAssessLinks(st, vals);
   if(dl) st.assessDeadline=dl; else delete st.assessDeadline;
   saveTrack(); reRenderRow(rid); renderReminder(); toast('测评信息已保存 ✅');
 }
