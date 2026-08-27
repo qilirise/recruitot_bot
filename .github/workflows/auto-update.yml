@@ -46,6 +46,12 @@ jobs:
         run: |
           python read_mail.py || echo "mail fetch skipped (secrets not configured)"
 
+      - name: Fetch OfferShow hot salaries (public API)
+        env:
+          QIUZHAO_OUT_DIR: ${{ github.workspace }}
+        run: |
+          python fetch_offershow.py || echo "offershow fetch skipped"
+
       - name: Commit and push if changed
         run: |
           git config user.name "qiuzhao27-bot"
