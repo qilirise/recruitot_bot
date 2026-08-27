@@ -649,7 +649,11 @@ document.getElementById('cloudModal').addEventListener('click',e=>{ if(e.target.
       </select>
     </div>
     <div id="addAssessFields">
-      <textarea id="addLinks" rows="3" placeholder="测评链接，每行一个（支持多个）" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;outline:none;box-sizing:border-box"></textarea>
+      <div class="strip-wrap" id="addStrips"><div class="strip-row">
+        <input type="url" class="strip-input" placeholder="测评链接（https://…）">
+        <button class="strip-add" onclick="addAssessStrip('addStrips')" title="添加一条链接">＋</button>
+        <button class="strip-del" onclick="removeAssessStrip('addStrips',0)" title="删除这一条">×</button>
+      </div></div>
       <input type="date" id="addDeadline" style="margin-top:8px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;width:100%;box-sizing:border-box">
     </div>
     <div id="addItvFields" style="display:none">
@@ -704,7 +708,8 @@ function addItemSubmit(){
   }
   const st=getRec(rid);
   if(type==='assess'){
-    const links=document.getElementById('addLinks').value.split('\n').map(s=>s.trim()).filter(Boolean);
+    const awrap=document.getElementById('addStrips');
+    const links=awrap?Array.from(awrap.querySelectorAll('.strip-input')).map(x=>x.value.trim()).filter(Boolean):[];
     setAssessLinks(st, links);
     const dl=document.getElementById('addDeadline').value;
     if(dl) st.assessDeadline=dl; else delete st.assessDeadline;
@@ -922,9 +927,9 @@ function openAssessEdit(rid,btn){
   box.className='assess-edit show';
   const links=getAssessLinks(st);
   const initStrips=(links.length?links:['']).map((l,i)=>`<div class="strip-row">
-    <input type="url" class="strip-input" id="assessStrip_${rid}_${i}" value="${esc(l)}" placeholder="测评链接（https://…）">
-    <button class="strip-add" onclick="addAssessStrip('${rid}')" title="添加一条链接">＋</button>
-    <button class="strip-del" onclick="removeAssessStrip('${rid}',${i})" title="删除这一条">×</button>
+    <input type="url" class="strip-input" value="${esc(l)}" placeholder="测评链接（https://…）">
+    <button class="strip-add" onclick="addAssessStrip('assessStrips_${rid}')" title="添加一条链接">＋</button>
+    <button class="strip-del" onclick="removeAssessStrip('assessStrips_${rid}',${i})" title="删除这一条">×</button>
   </div>`).join('');
   box.innerHTML=`
     <div class="strip-wrap" id="assessStrips_${rid}">${initStrips}</div>
@@ -937,21 +942,21 @@ function openAssessEdit(rid,btn){
   box.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 /* ===== 测评链接条带：添加/删除（最多5条） ===== */
-function addAssessStrip(rid){
-  const wrap=document.getElementById('assessStrips_'+rid); if(!wrap) return;
+function addAssessStrip(wrapId){
+  const wrap=document.getElementById(wrapId); if(!wrap) return;
   const rows=wrap.querySelectorAll('.strip-row').length;
   if(rows>=5){ toast('最多添加 5 个测评链接'); return; }
   const i=rows;
   const row=document.createElement('div');
   row.className='strip-row';
-  row.innerHTML=`<input type="url" class="strip-input" id="assessStrip_${rid}_${i}" placeholder="测评链接（https://…）">
-    <button class="strip-add" onclick="addAssessStrip('${rid}')" title="添加一条链接">＋</button>
-    <button class="strip-del" onclick="removeAssessStrip('${rid}',${i})" title="删除这一条">×</button>`;
+  row.innerHTML=`<input type="url" class="strip-input" placeholder="测评链接（https://…）">
+    <button class="strip-add" onclick="addAssessStrip('${wrapId}')" title="添加一条链接">＋</button>
+    <button class="strip-del" onclick="removeAssessStrip('${wrapId}',${i})" title="删除这一条">×</button>`;
   wrap.appendChild(row);
   row.querySelector('input').focus();
 }
-function removeAssessStrip(rid,idx){
-  const wrap=document.getElementById('assessStrips_'+rid); if(!wrap) return;
+function removeAssessStrip(wrapId,idx){
+  const wrap=document.getElementById(wrapId); if(!wrap) return;
   const rows=wrap.querySelectorAll('.strip-row');
   if(rows.length<=1){ toast('至少保留一条'); return; }
   const row=rows[idx];
@@ -1014,7 +1019,11 @@ function renderReminder(){
         <button class="rc-del" onclick="delAssess('${r.id}')" title="删除该公司的测评信息">🗑️ 删除</button>
       </div>
       <div class="rc-dl-edit" id="rcDlEdit_${r.id}">
-        <textarea id="rcDlLink_${r.id}" rows="2" style="flex:1;min-width:120px;border:1px solid var(--border);border-radius:6px;padding:4px 7px;font-size:12px;outline:none" placeholder="测评链接，每行一个">${esc(links.join('\n'))}</textarea>
+        <div class="strip-wrap" id="rcStrips_${r.id}">${(links.length?links:['']).map((l,i)=>`<div class="strip-row">
+          <input type="url" class="strip-input" value="${esc(l)}" placeholder="测评链接（https://…）">
+          <button class="strip-add" onclick="addAssessStrip('rcStrips_${r.id}')" title="添加一条链接">＋</button>
+          <button class="strip-del" onclick="removeAssessStrip('rcStrips_${r.id}',${i})" title="删除这一条">×</button>
+        </div>`).join('')}</div>
         <input type="date" id="rcDlDate_${r.id}" value="${esc(dl)}">
         <button class="ok" onclick="saveReminderDl('${r.id}')">保存</button>
         <button class="no" onclick="cancelReminderDl('${r.id}')">取消</button>
@@ -1174,13 +1183,14 @@ function cancelReminderDl(rid){
   if(box) box.classList.remove('show');
 }
 function saveReminderDl(rid){
-  const linkInp=document.getElementById('rcDlLink_'+rid);
+  const wrap=document.getElementById('rcStrips_'+rid);
   const inp=document.getElementById('rcDlDate_'+rid);
   if(!inp) return;
   const dl=inp.value;
   if(!dl){ toast('请选择日期'); return; }
   const st=getRec(rid);
-  setAssessLinks(st, (linkInp?linkInp.value:'').split('\n'));
+  const vals=wrap?Array.from(wrap.querySelectorAll('.strip-input')).map(x=>x.value.trim()):[];
+  setAssessLinks(st, vals);
   st.assessDeadline=dl;
   saveTrack();
   renderReminder();

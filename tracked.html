@@ -338,9 +338,9 @@ function openAssessEdit(rid,btn){
   box.className='assess-edit show';
   const links=getAssessLinks(st);
   const initStrips=(links.length?links:['']).map((l,i)=>`<div class="strip-row">
-    <input type="url" class="strip-input" id="assessStrip_${rid}_${i}" value="${esc(l)}" placeholder="测评链接（https://…）">
-    <button class="strip-add" onclick="addAssessStrip('${rid}')" title="添加一条链接">＋</button>
-    <button class="strip-del" onclick="removeAssessStrip('${rid}',${i})" title="删除这一条">×</button>
+    <input type="url" class="strip-input" value="${esc(l)}" placeholder="测评链接（https://…）">
+    <button class="strip-add" onclick="addAssessStrip('assessStrips_${rid}')" title="添加一条链接">＋</button>
+    <button class="strip-del" onclick="removeAssessStrip('assessStrips_${rid}',${i})" title="删除这一条">×</button>
   </div>`).join('');
   box.innerHTML=`
     <div class="strip-wrap" id="assessStrips_${rid}">${initStrips}</div>
@@ -353,21 +353,21 @@ function openAssessEdit(rid,btn){
   box.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 /* ===== 测评链接条带：添加/删除（最多5条） ===== */
-function addAssessStrip(rid){
-  const wrap=document.getElementById('assessStrips_'+rid); if(!wrap) return;
+function addAssessStrip(wrapId){
+  const wrap=document.getElementById(wrapId); if(!wrap) return;
   const rows=wrap.querySelectorAll('.strip-row').length;
   if(rows>=5){ toast('最多添加 5 个测评链接'); return; }
   const i=rows;
   const row=document.createElement('div');
   row.className='strip-row';
-  row.innerHTML=`<input type="url" class="strip-input" id="assessStrip_${rid}_${i}" placeholder="测评链接（https://…）">
-    <button class="strip-add" onclick="addAssessStrip('${rid}')" title="添加一条链接">＋</button>
-    <button class="strip-del" onclick="removeAssessStrip('${rid}',${i})" title="删除这一条">×</button>`;
+  row.innerHTML=`<input type="url" class="strip-input" placeholder="测评链接（https://…）">
+    <button class="strip-add" onclick="addAssessStrip('${wrapId}')" title="添加一条链接">＋</button>
+    <button class="strip-del" onclick="removeAssessStrip('${wrapId}',${i})" title="删除这一条">×</button>`;
   wrap.appendChild(row);
   row.querySelector('input').focus();
 }
-function removeAssessStrip(rid,idx){
-  const wrap=document.getElementById('assessStrips_'+rid); if(!wrap) return;
+function removeAssessStrip(wrapId,idx){
+  const wrap=document.getElementById(wrapId); if(!wrap) return;
   const rows=wrap.querySelectorAll('.strip-row');
   if(rows.length<=1){ toast('至少保留一条'); return; }
   const row=rows[idx];
