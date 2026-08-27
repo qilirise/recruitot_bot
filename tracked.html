@@ -129,6 +129,9 @@ footer{margin-top:30px;text-align:center;font-size:12px;color:var(--gray);line-h
 .modal .btns .no{background:#f1f5f9;color:var(--gray)}
 .cust-tag{display:inline-block;background:var(--primary-light);color:var(--primary);font-size:10px;padding:1px 7px;border-radius:8px;margin-left:6px;font-weight:600;vertical-align:middle}
 @media(max-width:900px){ .table-card{overflow-x:auto} table{min-width:1080px} }
+/* 表格滚动（静态5行 + 滚动） */
+.table-scroll{max-height:340px;overflow-y:auto}
+.table-scroll thead th{position:sticky;top:0;background:var(--card);z-index:2;box-shadow:0 1px 0 var(--border)}
 </style>
 </head>
 <body>
@@ -161,7 +164,7 @@ footer{margin-top:30px;text-align:center;font-size:12px;color:var(--gray);line-h
     <span class="count-note" id="countNote"></span>
   </div>
 
-  <div class="table-card">
+  <div class="table-card table-scroll">
     <table>
       <thead>
         <tr>

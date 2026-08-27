@@ -31,6 +31,20 @@ def fetch_top(hot_type, offset, limit, retries=3):
             time.sleep(2)
     return None
 
+def fetch_wlb(offset, limit, retries=3):
+    body = urllib.parse.urlencode({'search_content': '', 'filter_type': '1', 'offset': offset, 'limit': limit}).encode()
+    for i in range(retries):
+        try:
+            req = urllib.request.Request('https://offershow.cn/offershow/v5/search_wlb_955_web', data=body, headers=HDRS)
+            with urllib.request.urlopen(req, timeout=25) as r:
+                return json.loads(r.read().decode('utf-8', errors='replace'))
+        except Exception as e:
+            if i == retries - 1:
+                print(f'fetch_wlb offset={offset} 失败: {e}', file=sys.stderr)
+                return None
+            time.sleep(2)
+    return None
+
 def main():
     items = []
     for ht in (1, 2, 3):
@@ -47,15 +61,30 @@ def main():
         if it.get('id') and it['id'] not in seen:
             seen.add(it['id'])
             uniq.append(it)
+    # 955/WLB 公司榜（岗位开放信息源：公司+城市+行业+部门+推荐理由）
+    wlb_items = []
+    for off in (0, 50, 100, 150):
+        d = fetch_wlb(off, 50)
+        if not d or d.get('result') != 1:
+            continue
+        lst = ((d.get('data') or {}).get('data')) or []
+        wlb_items.extend(lst)
+    seen2, wlb_uniq = set(), []
+    for it in wlb_items:
+        if it.get('topic_id') and it['topic_id'] not in seen2:
+            seen2.add(it['topic_id'])
+            wlb_uniq.append(it)
     out = {
         'generatedAt': time.strftime('%Y-%m-%d %H:%M:%S'),
         'total': len(uniq),
+        'jobsTotal': len(wlb_uniq),
         'source': 'offershow.cn',
         'list': uniq,
+        'jobs': wlb_uniq,
     }
     with open(os.path.join(OUT_DIR, 'offershow_data.js'), 'w', encoding='utf-8') as f:
         f.write('window.OFFERSHOW_DATA = ' + json.dumps(out, ensure_ascii=False) + ';\n')
-    print(f'OK offershow items: {len(uniq)} generatedAt={out["generatedAt"]}')
+    print(f'OK offershow items: {len(uniq)} jobs: {len(wlb_uniq)} generatedAt={out["generatedAt"]}')
 
 if __name__ == '__main__':
     main()

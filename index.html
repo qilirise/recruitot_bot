@@ -398,6 +398,23 @@ td .co-sub{font-size:11px;color:var(--gray);margin-top:2px}
 .os-card .remark{font-size:11px;color:#64748b;margin-top:6px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .os-card .sc{background:var(--amber-bg);color:var(--amber);padding:1px 8px;border-radius:8px;font-size:11px;font-weight:600}
 .os-empty{grid-column:1/-1;text-align:center;color:var(--gray);padding:26px;border:1px dashed var(--border);border-radius:12px;background:var(--card)}
+/* 表格滚动（静态5行 + 滚动） */
+.table-scroll{max-height:340px;overflow-y:auto}
+.table-scroll thead th{position:sticky;top:0;background:var(--card);z-index:2;box-shadow:0 1px 0 var(--border)}
+/* 955 子区 */
+.os-sub-title{font-size:14px;font-weight:700;color:var(--primary-dark);margin:18px 0 10px;display:flex;align-items:center;gap:8px}
+.os-scroll{max-height:470px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-right:4px}
+.os-scroll::-webkit-scrollbar{width:6px}
+.os-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.os-job{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 14px}
+.os-job .j1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.os-job .jnm{font-size:13px;font-weight:700;color:var(--primary-dark)}
+.os-job .jmeta{font-size:11px;color:var(--gray);margin-top:4px}
+.os-job .jcontent{font-size:11.5px;color:#64748b;margin-top:6px;line-height:1.6;white-space:pre-line}
+.os-job .jstats{font-size:10.5px;color:var(--gray);margin-top:5px;display:flex;gap:12px}
+.os-go{color:var(--primary);font-weight:600;text-decoration:none;font-size:11.5px;margin-left:auto}
+.os-go:hover{text-decoration:underline}
+.os-card .os-go{display:block;text-align:right;margin-top:6px;font-size:11.5px}
 /* footer */
 footer{margin-top:30px;text-align:center;font-size:12px;color:var(--gray);line-height:1.8}
 
@@ -510,7 +527,7 @@ footer{margin-top:30px;text-align:center;font-size:12px;color:var(--gray);line-h
       <button class="header-btn ghost" style="background:var(--primary);color:#fff;border:none" id="btnReset">重置筛选</button>
       <span class="count-note" id="countNote"></span>
     </div>
-    <div class="table-card">
+    <div class="table-card table-scroll">
       <table id="mainTable">
         <thead>
           <tr>
@@ -535,6 +552,10 @@ footer{margin-top:30px;text-align:center;font-size:12px;color:var(--gray);line-h
     </div>
     <div class="os-search"><input type="text" id="osSearch" placeholder="🔍 输入公司名筛选（如 字节、华为、腾讯…）" oninput="renderOfferShow()"></div>
     <div class="os-grid" id="osGrid"><div style="grid-column:1/-1;text-align:center;color:var(--gray);padding:24px">加载中…</div></div>
+    <div class="os-sub-title">🕊️ WLB / 955 公司开放岗位信息 <span class="tag" id="osJobsCount">0</span>
+      <span class="hint" style="float:right;font-weight:400">静态展示 5 家 · 上下滚动查看更多</span>
+    </div>
+    <div class="os-scroll" id="osJobs"><div style="text-align:center;color:var(--gray);padding:24px">加载中…</div></div>
   </div>
 
   <footer>
@@ -1710,13 +1731,33 @@ function renderOfferShow(){
     const sc = it.score ? ` <span class="sc">评分 ${it.score}</span>` : '';
     const typeTxt = it.salarytype ? ` · ${esc(it.salarytype)}` : '';
     return `<div class="os-card">
-      <div class="c1"><span class="nm">${esc(it.company||'')}</span>${sc}</div>
+      <div class="c1"><span class="nm">${esc(it.company||'')}</span>${sc}<a class="os-go" href="https://offershow.cn" target="_blank" rel="noopener">查看详情 →</a></div>
       <div class="sal">💰 ${esc(it.salary||'')}</div>
       <div class="pos">${esc(it.position||'')}${typeTxt}</div>
       <div class="meta"><span>📍 ${esc(it.city||'—')}</span><span>🎓 ${esc(it.xueli||'—')}</span><span>🏭 ${esc(it.hangye||'—')}</span><span>👥 ${it.number||''}</span></div>
       ${it.remark?`<div class="remark" title="${esc(it.remark)}">${esc(it.remark)}</div>`:''}
     </div>`;
   }).join('');
+  // 955/WLB 公司（岗位开放信息，静态5家可视+滚动）
+  const jobsBox=document.getElementById('osJobs');
+  const jcnt=document.getElementById('osJobsCount');
+  if(jcnt) jcnt.textContent=osd.jobsTotal||(osd.jobs?osd.jobs.length:0);
+  if(jobsBox){
+    const jobs=osd.jobs||[];
+    if(!jobs.length){
+      jobsBox.innerHTML='<div style="text-align:center;color:var(--gray);padding:24px">📭 暂无 WLB/955 数据（云端抓取中）</div>';
+    } else {
+      jobsBox.innerHTML=jobs.map(j=>{
+        const ttl=(j.topic_title||'').replace(/WLB-/,'').replace(/^.{0,6}市/,'');  // 简化标题：去前缀
+        const votes=Array.isArray(j.topic_votes)?j.topic_votes.length:0;
+        return `<div class="os-job">
+          <div class="j1"><span class="jnm">🕊️ ${esc(j.topic_title||'')}</span><a class="os-go" href="https://offershow.cn" target="_blank" rel="noopener">查看详情 →</a></div>
+          <div class="jcontent">${esc(j.topic_content||'')}</div>
+          <div class="jstats"><span>👍 ${j.like_count||0}</span><span>👎 ${j.dislike_count||0}</span><span>👀 ${j.topic_view_count||0}</span>${votes?`<span>🗳 ${votes}</span>`:''}</div>
+        </div>`;
+      }).join('');
+    }
+  }
 }
 
 function renderAllData(){
