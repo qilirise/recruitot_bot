@@ -6,6 +6,8 @@ on:
   schedule:
     - cron: '*/30 * * * *'
   workflow_dispatch: {}  # 支持手动触发
+  push:
+    branches: [main]  # TEMP: 诊断用临时触发器
 
 permissions:
   contents: write
