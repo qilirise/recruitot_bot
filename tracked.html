@@ -379,8 +379,8 @@ function itvChip(rid,stage){
 function itvCell(rid){
   const st=getRec(rid); const it=st.itv||{};
   const parts=[];
-  for(let s=1;s<=3;s++){ const t=it[s]; if(t&&t.time) parts.push({stage:s,time:t.time,note:t.note||'',done:!!t.done}); }
-  const html=parts.map(p=>`<div class="itv-time show" style="cursor:pointer" title="点击标记/取消完成" onclick="toggleItvDone('${rid}',${p.stage})">${p.done?'✅':'📅'} 第${'一二三'[p.stage-1]}面：${fmtTime(p.time)}${p.note?' · '+esc(p.note):''}</div>`).join('');
+  for(let s=1;s<=3;s++){ const t=it[s]; if(t&&t.time) parts.push({stage:s,time:t.time,note:t.note||'',link:t.link||'',done:!!t.done}); }
+  const html=parts.map(p=>`<div class="itv-time show" style="cursor:pointer" title="点击标记/取消完成" onclick="toggleItvDone('${rid}',${p.stage})">${p.done?'✅':'📅'} 第${'一二三'[p.stage-1]}面：${fmtTime(p.time)}${p.link?` · 🔗 <a href="${esc(p.link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">链接</a>`:''}${p.note?' · '+esc(p.note):''}</div>`).join('');
   return `<div class="itv-row">${[1,2,3].map(s=>itvChip(rid,s)).join('')}</div>
           <div class="itv-edit" id="itvEdit_${rid}"></div>${html}`;
 }
@@ -392,6 +392,7 @@ function openItvEdit(rid,stage){
   box.className='itv-edit show';
   box.innerHTML=`
     <input type="datetime-local" id="itvT_${rid}_${stage}" value="${localVal}">
+    <input type="url" id="itvL_${rid}_${stage}" value="${esc(it.link||'')}" placeholder="面试链接（可选）">
     <input type="text" id="itvN_${rid}_${stage}" value="${esc(it.note||'')}" placeholder="备注" maxlength="60">
     <div class="btns">
       <button class="save" onclick="saveItv('${rid}',${stage})">保存</button>
@@ -402,10 +403,13 @@ function openItvEdit(rid,stage){
 }
 function saveItv(rid,stage){
   const t=document.getElementById(`itvT_${rid}_${stage}`).value;
+  const lk=document.getElementById(`itvL_${rid}_${stage}`).value.trim();
   const n=document.getElementById(`itvN_${rid}_${stage}`).value.trim();
   const st=getRec(rid); if(!st.itv) st.itv={};
-  if(t){ st.itv[stage]={time:new Date(t).getTime(), note:n, done: st.itv[stage]?!!st.itv[stage].done:false}; }
-  else if(n){ st.itv[stage]={time:'', note:n, done:false}; }
+  const prev=st.itv[stage]||{};
+  if(t){ st.itv[stage]={time:new Date(t).getTime(), note:n, link:lk, done:!!prev.done}; }
+  else if(n||lk){ st.itv[stage]={time:'', note:n, link:lk, done:false}; }
+  else { st.itv[stage]={time:'', note:'', link:lk, done:false}; }
   saveTrack(); renderAll(); toast('面试安排已保存 📅');
 }
 function clearItv(rid,stage){
@@ -511,7 +515,7 @@ function renderAll(){
   body.innerHTML=rows.map(renderRow).join('');
   // stats
   let assess=0,itv=0,offer=0,lose=0;
-  appliedRows().forEach(r=>{ const st=getRec(r.id); if(st.assess) assess++; if(Object.keys(st.itv||{}).length) itv++; if(st.offer==='offered') offer++; if(st.offer==='rejected') lose++; });
+  appliedRows().forEach(r=>{ const st=getRec(r.id); if(st.assess) assess++; if(st.itv) for(let s=1;s<=3;s++){ if(st.itv[s]&&st.itv[s].time&&!st.itv[s].done){ itv++; break; } } if(st.offer==='offered') offer++; if(st.offer==='rejected') lose++; });
   document.getElementById('stAssess').textContent=assess;
   document.getElementById('stItv').textContent=itv;
   document.getElementById('stOffer').textContent=offer;

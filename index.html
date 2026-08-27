@@ -403,7 +403,7 @@ footer{margin-top:30px;text-align:center;font-size:12px;color:var(--gray);line-h
       <span class="badge" id="newCountBadge">🆕 今日新开：--</span>
       <span class="badge" id="dataTime">⏱ 数据更新：--</span>
       <button class="header-btn ghost" onclick="manualRefresh()">🔄 刷新数据</button>
-      <button class="header-btn" onclick="openDsModal()" title="查看 DeepSeek API 余额用量">🤖 DeepSeek 用量</button>
+      <a class="header-btn" href="https://platform.deepseek.com/usage" target="_blank" rel="noopener" title="跳转 DeepSeek 平台查看余额用量" style="text-decoration:none">🤖 DeepSeek 用量</a>
       <button class="header-btn ghost" onclick="openCloudModal()" title="跨设备同步数据到 GitHub Gist">☁️ 云同步</button>
       <a class="header-btn" href="mail.html" style="text-decoration:none">📧 邮件识别中心</a>
       <button class="header-btn" onclick="openGuide()">📖 使用说明</button>
@@ -512,26 +512,9 @@ footer{margin-top:30px;text-align:center;font-size:12px;color:var(--gray);line-h
 
 <div id="toast"></div>
 
-<!-- DeepSeek 用量模态框（从侧边卡片改为弹窗按钮） -->
-<div class="modal-mask" id="dsModal">
-  <div class="modal" style="max-width:420px">
-    <div class="ds-card" id="dsCard" style="box-shadow:none">
-      <div class="ds-head">🤖 DeepSeek API 用量
-        <button class="ds-refresh" id="dsRefreshBtn" onclick="refreshDeepSeek()" title="重新加载云端最新余额">🔄 刷新</button>
-      </div>
-      <div class="ds-sub">api.deepseek.com 余额监控 · 云端每30分钟自动更新</div>
-      <div class="ds-body" id="dsBody">加载中…</div>
-      <a class="ds-link" href="https://platform.deepseek.com/usage" target="_blank" rel="noopener">打开 DeepSeek 平台 →</a>
-    </div>
-    <div class="btns" style="margin-top:14px;justify-content:flex-end">
-      <button class="no" onclick="closeDsModal()">关闭</button>
-    </div>
-  </div>
-</div>
+<!-- DeepSeek 用量：点击页头按钮直接跳转平台（不再弹窗） -->
 <script>
-function openDsModal(){ document.getElementById('dsModal').classList.add('show'); renderDeepSeek(); }
-function closeDsModal(){ document.getElementById('dsModal').classList.remove('show'); }
-document.getElementById('dsModal').addEventListener('click',e=>{ if(e.target.id==='dsModal') closeDsModal(); });
+function openDsModal(){ window.open('https://platform.deepseek.com/usage','_blank'); }
 </script>
 
 <!-- 云同步模态框（GitHub Gist 跨设备同步） -->
@@ -638,6 +621,7 @@ document.getElementById('cloudModal').addEventListener('click',e=>{ if(e.target.
     </div>
     <div id="addItvFields" style="display:none">
       <input type="datetime-local" id="addItvTime" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;box-sizing:border-box">
+      <input type="url" id="addItvLink" placeholder="面试链接（可选）" style="margin-top:8px;width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;box-sizing:border-box">
       <input type="text" id="addItvNote" placeholder="备注（可选，如腾讯会议）" style="margin-top:8px;width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;box-sizing:border-box">
     </div>
     <div class="btns" style="justify-content:flex-end;margin-top:12px">
@@ -697,12 +681,13 @@ function addItemSubmit(){
   } else {
     const t=document.getElementById('addItvTime').value;
     const n=document.getElementById('addItvNote').value.trim();
+    const lk=document.getElementById('addItvLink').value.trim();
     if(!t){ toast('请填写面试时间'); return; }
     if(!st.itv) st.itv={};
     // 找第一个空位（1/2/3面）
     let stage=1;
     for(let s=1;s<=3;s++){ if(!st.itv[s] || !st.itv[s].time){ stage=s; break; } }
-    st.itv[stage]={time:new Date(t).getTime(), note:n, done:false};
+    st.itv[stage]={time:new Date(t).getTime(), note:n, link:lk, done:false};
     saveTrack(); renderInterview(); renderReminder(); applyFilters();
     toast('✅ 已添加面试：'+name+'（第'+'一二三'[stage-1]+'面）');
   }
@@ -1005,9 +990,9 @@ function renderInterview(){
           dateStr: d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'),
           timeStr: String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'),
           src: 'track',
-          stageName: '第'+'一二三'[s-1]+'面',
+          stageName: '一二三'[s-1]+'面',
           note: it.note||'',
-          link: getAssessLinks(st)[0]||'',
+          link: it.link||'',
         });
       }
     });
@@ -1061,7 +1046,7 @@ function renderInterview(){
         <span class="irc-days ${daysCls}">${days}</span>
       </div>
       ${it.note?`<div class="irc-meta">📝 ${esc(it.note)}</div>`:''}
-      ${it.link?`<div class="irc-link"><a href="${esc(it.link)}" target="_blank" rel="noopener">🔗 相关链接</a></div>`:''}
+      ${it.link?`<div class="irc-link"><a href="${esc(it.link)}" target="_blank" rel="noopener">🔗 面试链接${it.src==='track'?'（'+esc(it.stageName)+'）':''}</a></div>`:''}
       ${it.src==='track'?`<div class="irc-btns">
         <button class="irc-done" onclick="doneItv('${it.rid}',${it.stage})" title="标记该轮面试完成">✅ 完成</button>
         <button class="irc-del" onclick="delItv('${it.rid}',${it.stage})" title="删除该轮面试安排">🗑️ 删除</button>
@@ -1100,6 +1085,7 @@ function doneItv(rid,stage){
   saveTrack();
   renderReminder();
   renderInterview();
+  refreshStats();
   toast('✅ 已标记该轮面试完成');
 }
 function delItv(rid,stage){
@@ -1111,6 +1097,7 @@ function delItv(rid,stage){
   }
   saveTrack();
   renderInterview();
+  refreshStats();
   toast('🗑️ 该轮面试已删除');
 }
 
@@ -1478,14 +1465,14 @@ function showRecent(){
 
 /* ============ 统计 ============ */
 function refreshStats(){
-  let applied=0,assess=0,itv1=0,itv2=0,itv3=0,offer=0,lose=0;
+  let applied=0,assess=0,itv1=0,itv2=0,itv3=0,itv1Total=0,itv2Total=0,itv3Total=0,offer=0,lose=0;
   if(MAIN_TAB) MAIN_TAB.records.forEach(r=>{
     const st=getRec(r.id);
     if(st.applied) applied++;
     if(st.assess) assess++;
-    if(st.itv&&st.itv[1]&&st.itv[1].time) itv1++;
-    if(st.itv&&st.itv[2]&&st.itv[2].time) itv2++;
-    if(st.itv&&st.itv[3]&&st.itv[3].time) itv3++;
+    if(st.itv&&st.itv[1]&&st.itv[1].time){ itv1Total++; if(!st.itv[1].done) itv1++; }
+    if(st.itv&&st.itv[2]&&st.itv[2].time){ itv2Total++; if(!st.itv[2].done) itv2++; }
+    if(st.itv&&st.itv[3]&&st.itv[3].time){ itv3Total++; if(!st.itv[3].done) itv3++; }
     if(st.offer==='offered') offer++;
     if(st.offer==='rejected') lose++;
   });
@@ -1495,7 +1482,7 @@ function refreshStats(){
   document.getElementById('stAssess').textContent=assess;
   document.getElementById('stAssessPct').textContent=total?`${Math.round(assess/total*100)}% 已测评率`:'';
   document.getElementById('stItv').textContent=itv1+itv2+itv3;
-  document.getElementById('stItvDetail').textContent=`一面 ${itv1} · 二面 ${itv2} · 三面 ${itv3}`;
+  document.getElementById('stItvDetail').textContent=`一面 ${itv1Total} · 二面 ${itv2Total} · 三面 ${itv3Total}`;
   document.getElementById('stOffer').textContent=offer;
   document.getElementById('stLose').textContent=`挂了 ${lose} 家`;
   const d7=daysAgoStr(7);
