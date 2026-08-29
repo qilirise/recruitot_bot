@@ -20,7 +20,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Skip bot self-trigger (anti-loop)
+      - name: Skip bot self-trigger (anti-loop, only for push events)
+        if: github.event_name == 'push'
         run: |
           AUTHOR=$(git log -1 --pretty=format:'%an')
           echo "last author: $AUTHOR"
