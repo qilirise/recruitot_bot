@@ -147,6 +147,7 @@ def main():
         f.write(js)
     print(f'[ok] wrote {path} ({len(js)} bytes)')
     # also write a JSON snapshot for debugging
+    os.makedirs(os.path.join(OUT_DIR, '.tmp'), exist_ok=True)
     with open(os.path.join(OUT_DIR, '.tmp', 'latest_data.json'), 'w', encoding='utf-8') as f:
         json.dump(result, f, ensure_ascii=False, indent=1)
     print('[ok] snapshot saved')
