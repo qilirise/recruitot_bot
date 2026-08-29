@@ -142,12 +142,12 @@ def main():
         sys.exit(1)
     # write data.js
     js = 'window.QIUZHAO_DATA = ' + json.dumps(result, ensure_ascii=False) + ';\n'
-    path = OUT_DIR + r'\data.js'
+    path = os.path.join(OUT_DIR, 'data.js')
     with open(path, 'w', encoding='utf-8') as f:
         f.write(js)
     print(f'[ok] wrote {path} ({len(js)} bytes)')
     # also write a JSON snapshot for debugging
-    with open(OUT_DIR + r'\.tmp\latest_data.json', 'w', encoding='utf-8') as f:
+    with open(os.path.join(OUT_DIR, '.tmp', 'latest_data.json'), 'w', encoding='utf-8') as f:
         json.dump(result, f, ensure_ascii=False, indent=1)
     print('[ok] snapshot saved')
 
@@ -219,7 +219,7 @@ def write_daily_report(data):
             if url:
                 lines.append(f'  - 🔗 {url}')
         lines.append('')
-    report_path = OUT_DIR + r'\秋招日报.md'
+    report_path = os.path.join(OUT_DIR, '秋招日报.md')
     with open(report_path, 'w', encoding='utf-8') as f:
         f.write('\n'.join(lines))
     print(f'[ok] wrote {report_path} ({len(lines)} lines)')
