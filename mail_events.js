@@ -1,1 +1,1 @@
-window.MAIL_EVENTS = {"generatedAt": "2026-08-30 07:25:22", "configured": false, "lastCheck": "not-configured", "eventCount": 0, "events": []};
+window.MAIL_EVENTS = {"generatedAt": "2026-08-30 07:30:29", "configured": false, "lastCheck": "not-configured", "eventCount": 0, "events": []};
