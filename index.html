@@ -678,7 +678,12 @@ document.getElementById('cloudModal').addEventListener('click',e=>{ if(e.target.
       <input type="date" id="addDeadline" style="margin-top:8px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;width:100%;box-sizing:border-box">
     </div>
     <div id="addItvFields" style="display:none">
-      <input type="datetime-local" id="addItvTime" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;box-sizing:border-box">
+      <select id="addItvStage" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;box-sizing:border-box">
+        <option value="1">🎤 一面</option>
+        <option value="2">🎤 二面</option>
+        <option value="3">🎤 三面</option>
+      </select>
+      <input type="datetime-local" id="addItvTime" style="margin-top:8px;width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;box-sizing:border-box">
       <input type="url" id="addItvLink" placeholder="面试链接（可选）" style="margin-top:8px;width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;box-sizing:border-box">
       <input type="text" id="addItvNote" placeholder="备注（可选，如腾讯会议）" style="margin-top:8px;width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;box-sizing:border-box">
     </div>
@@ -743,9 +748,8 @@ function addItemSubmit(){
     const lk=document.getElementById('addItvLink').value.trim();
     if(!t){ toast('请填写面试时间'); return; }
     if(!st.itv) st.itv={};
-    // 找第一个空位（1/2/3面）
-    let stage=1;
-    for(let s=1;s<=3;s++){ if(!st.itv[s] || !st.itv[s].time){ stage=s; break; } }
+    // 用户选择的面试轮次（一面/二面/三面）
+    let stage=parseInt(document.getElementById('addItvStage').value,10)||1;
     st.itv[stage]={time:new Date(t).getTime(), note:n, link:lk, done:false};
     saveTrack(); renderInterview(); renderReminder(); applyFilters();
     toast('✅ 已添加面试：'+name+'（第'+'一二三'[stage-1]+'面）');
