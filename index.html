@@ -738,8 +738,9 @@ function addItemSubmit(){
     const links=awrap?Array.from(awrap.querySelectorAll('.strip-input')).map(x=>x.value.trim()).filter(Boolean):[];
     setAssessLinks(st, links);
     const dl=document.getElementById('addDeadline').value;
-    if(dl) st.assessDeadline=dl; else delete st.assessDeadline;
-    if(!links.length && !st.assessDeadline){ toast('请填写测评链接或截止日期'); return; }
+    if(!dl){ toast('⚠️ 请填写测评截止日期（用于每日提醒）'); return; }
+    st.assessDeadline=dl;
+    if(!links.length){ toast('⚠️ 请至少填写一个测评链接'); return; }
     saveTrack(); renderReminder(); renderInterview(); applyFilters();
     toast('✅ 已添加测评：'+name);
   } else {
