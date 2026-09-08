@@ -219,6 +219,7 @@ footer{margin-top:30px;text-align:center;font-size:12px;color:var(--gray);line-h
 })();
 
 const DATA = window.QIUZHAO_DATA || null;
+let MAIN_TAB = DATA ? (DATA.tabs.find(t=>t.tab==='tvVDZj') || DATA.tabs[0]) : null;
 const ALL_RECORDS = [];
 if(DATA){ DATA.tabs.forEach(t=>t.records.forEach(r=>ALL_RECORDS.push(r))); }
 const STORE_KEY = Auth.userKey('qiuzhao27_track_v1');
@@ -544,9 +545,17 @@ function renderAll(){
     return;
   }
   body.innerHTML=rows.map(renderRow).join('');
-  // stats
-  let assess=0,itv=0,offer=0,lose=0;
-  appliedRows().forEach(r=>{ const st=getRec(r.id); if(st.assess) assess++; if(st.itv) for(let s=1;s<=3;s++){ if(st.itv[s]&&st.itv[s].time&&!st.itv[s].done){ itv++; break; } } if(st.offer==='offered') offer++; if(st.offer==='rejected') lose++; });
+  // stats（口径与首页重要看板一致：遍历全部记录，面试按场次统计）
+  let applied=0,assess=0,itv=0,offer=0,lose=0;
+  if(MAIN_TAB) MAIN_TAB.records.forEach(r=>{
+    const st=getRec(r.id);
+    if(st.applied) applied++;
+    if(st.assess) assess++;
+    if(st.itv){ for(let s=1;s<=3;s++){ if(st.itv[s]&&st.itv[s].time&&!st.itv[s].done) itv++; } }
+    if(st.offer==='offered') offer++;
+    if(st.offer==='rejected') lose++;
+  });
+  document.getElementById('stTotal').textContent=applied;
   document.getElementById('stAssess').textContent=assess;
   document.getElementById('stItv').textContent=itv;
   document.getElementById('stOffer').textContent=offer;
