@@ -208,6 +208,7 @@ footer{margin-top:30px;text-align:center;font-size:12px;color:var(--gray);line-h
 </div>
 
 <script src="data.js"></script>
+<script src="data_source2.js"></script>
 <script src="auth.js"></script>
 <script src="cloud.js"></script>
 <script>
@@ -222,6 +223,37 @@ const DATA = window.QIUZHAO_DATA || null;
 let MAIN_TAB = DATA ? (DATA.tabs.find(t=>t.tab==='tvVDZj') || DATA.tabs[0]) : null;
 const ALL_RECORDS = [];
 if(DATA){ DATA.tabs.forEach(t=>t.records.forEach(r=>ALL_RECORDS.push(r))); }
+/* 数据源2（2027届校招信息汇总表）：合并进全部公司表（主表同名优先，source2 独有公司加入） */
+const SRC2 = window.SOURCE2_DATA || null;
+if(SRC2 && SRC2.records){
+  const mainNames = new Set();
+  ALL_RECORDS.forEach(r=>{ const n=(r.v?r.v['公司名称']:r['公司名称'])||''; if(n) mainNames.add(String(n).trim()); });
+  SRC2.records.forEach(r=>{
+    const nm = String(r['公司名称']||'').trim();
+    if(!nm || mainNames.has(nm)) return;
+    mainNames.add(nm);
+    ALL_RECORDS.push({
+      id: 's2_' + nm,
+      source: '2',
+      v: {
+        '公司名称': nm,
+        '招聘岗位': r['招聘岗位']||'',
+        '工作地点': r['工作地点']||'',
+        '行业': r['行业']||'',
+        '企业性质': r['企业性质']||'',
+        '批次': r['批次']||'',
+        '招聘对象': r['招聘对象']||'',
+        '更新日期': r['更新日期']||'',
+        '招聘截止日期': r['截止日期']||'',
+        '网申状态': r['网申状态']||'',
+        '官方公告': r['官方公告']||'',
+        '投递链接': (r['投递方式']||r['官方公告']) ? [{text: r['投递方式']||r['官方公告'], url: /^https?:\/\//.test(r['投递方式']||r['官方公告']||'') ? (r['投递方式']||r['官方公告']) : ''}] : [],
+        '内推码': r['内推码']||'',
+        '备注': ''
+      }
+    });
+  });
+}
 const STORE_KEY = Auth.userKey('qiuzhao27_track_v1');
 let track = {};
 try{ track = JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }catch(e){ track = {}; }
@@ -230,16 +262,51 @@ try{ track = JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }catch(e){ track
 
 function saveTrack(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(track)); }catch(e){} window.Cloud&&Cloud.schedulePush&&Cloud.schedulePush(); }
 
-/* 多链接支持 */
-function getAssessLinks(st){
-  if(st && Array.isArray(st.assessLinks) && st.assessLinks.length) return st.assessLinks.filter(Boolean);
-  if(st && st.assessLink) return [st.assessLink];
+/* ===== 测评多条目（同一公司可多次测评） ===== */
+function getAssessList(st){
+  if(!st) return [];
+  if(Array.isArray(st.assessList) && st.assessList.length) return st.assessList;
+  const links = Array.isArray(st.assessLinks)?st.assessLinks.filter(Boolean):(st.assessLink?[st.assessLink]:[]);
+  if(links.length || st.assessDeadline) return [{id:'a_legacy', links:links, deadline:st.assessDeadline||'', done:!!st.assess, createdAt:''}];
   return [];
+}
+function writeAssessList(st, list){
+  const arr=(list||[]).filter(Boolean);
+  if(arr.length){ st.assessList=arr; } else { delete st.assessList; }
+  const first=arr[0];
+  if(first){
+    if(first.links && first.links.length) st.assessLinks=first.links.slice(); else delete st.assessLinks;
+    delete st.assessLink;
+    if(first.deadline) st.assessDeadline=first.deadline; else delete st.assessDeadline;
+  } else { delete st.assessLinks; delete st.assessLink; delete st.assessDeadline; }
+  st.assess = arr.length>0 && arr.every(x=>x.done);
+}
+function addAssessItem(st, links, deadline){
+  const list=getAssessList(st);
+  list.push({id:'a'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+             links:(links||[]).filter(Boolean), deadline:deadline||'', done:false, createdAt:new Date().toISOString()});
+  writeAssessList(st, list);
+  return list;
+}
+function updateAssessItem(st, aid, patch){
+  const list=getAssessList(st);
+  const it=list.find(x=>x.id===aid);
+  if(!it) return null;
+  Object.assign(it, patch||{});
+  writeAssessList(st, list);
+  return it;
+}
+function getAssessLinks(st){
+  const out=[];
+  getAssessList(st).forEach(x=>(x.links||[]).forEach(u=>{ if(u && out.indexOf(u)<0) out.push(u); }));
+  return out;
 }
 function setAssessLinks(st, arr){
   const a=(arr||[]).map(x=>String(x==null?'':x).trim()).filter(Boolean);
-  if(a.length){ st.assessLinks=a; delete st.assessLink; }
-  else { delete st.assessLinks; delete st.assessLink; }
+  const list=getAssessList(st);
+  if(!list.length) list.push({id:'a'+Date.now().toString(36), links:[], deadline:'', done:false, createdAt:new Date().toISOString()});
+  list[0].links=a;
+  writeAssessList(st, list);
   return a;
 }
 function getRec(rid){ if(!track[rid]) track[rid]={applied:false,assess:false,itv:{},offer:'active'}; return track[rid]; }
@@ -317,6 +384,7 @@ function saveEntry(){
 /* ---- 交互（与首页同 key，实时同步） ---- */
 function toggleAssess(rid,btn){
   const st=getRec(rid); st.assess=!st.assess;
+  { const _l=getAssessList(st).map(x=>{ x.done=st.assess; return x; }); if(_l.length) writeAssessList(st,_l); }
   btn.classList.toggle('on-amber',st.assess); btn.textContent=st.assess?'📝 已测评':'⬜ 未测评';
   saveTrack(); renderAll(); toast(st.assess?'已标记测评':'已取消测评');
 }
@@ -383,12 +451,13 @@ function saveAssess(rid){
   const vals=wrap?Array.from(wrap.querySelectorAll('.strip-input')).map(x=>x.value.trim()):[];
   const dl=document.getElementById('assessD_'+rid).value;
   setAssessLinks(st, vals);
-  if(dl) st.assessDeadline=dl; else delete st.assessDeadline;
+  const _l=getAssessList(st);
+  if(_l.length){ _l[0].links=vals.filter(Boolean); _l[0].deadline=dl||''; writeAssessList(st,_l); }
   saveTrack(); renderAll(); toast('测评信息已保存 ✅');
 }
 function clearAssess(rid){
   const st=getRec(rid);
-  delete st.assessLinks; delete st.assessLink; delete st.assessDeadline;
+  delete st.assessList; delete st.assessLinks; delete st.assessLink; delete st.assessDeadline;
   saveTrack(); renderAll(); toast('已清空测评信息');
 }
 function cancelAssess(rid){ const box=document.getElementById('assessEdit_'+rid); if(box) box.className='assess-edit'; }
@@ -482,7 +551,7 @@ function renderRow(r){
   const urlHtml = urls.length ? `<div class="url-list">${urls.map(u=>`<a href="${esc(u.url)}" target="_blank" rel="noopener">🔗 ${esc(u.text)||'投递'}</a>`).join('')}</div>` : '<span style="color:#94a3b8">—</span>';
   const pubHtml = pub.length ? `<div class="url-list" style="margin-top:3px">${pub.map(()=>`<a href="${esc(pub[0].url)}" target="_blank" rel="noopener">📄 公告</a>`).join('')}</div>` : '';
   return `<tr data-rid="${rid}">
-    <td><div class="co-name">${esc(v['公司名称']||rid)}${r.custom?'<span class="cust-tag">自定义</span>':''}</div><div class="co-sub">更新于 ${esc(v['更新日期']||'—')}</div></td>
+    <td><div class="co-name">${esc(v['公司名称']||rid)}${r.custom?'<span class="cust-tag">自定义</span>':''}${r.source==='2'?'<span class="cust-tag s2-tag">总表</span>':''}</div><div class="co-sub">更新于 ${esc(v['更新日期']||'—')}</div></td>
     <td class="job-cell">${esc(v['招聘岗位']||'—')}</td>
     <td>${v['行业']?`<span class="ind-tag">🏭 ${esc(v['行业'])}</span>`:''}<div style="margin-top:4px;font-size:12px;color:var(--gray)">📍 ${esc(v['工作地点']||'—')}</div></td>
     <td>${v['批次']?`<span class="batch-tag">${esc(v['批次'])}</span>`:''}<div class="deadline ${dlWarn?'warn':''}" style="margin-top:4px">⏰ ${esc(dl)||'—'}</div></td>
@@ -507,7 +576,7 @@ function renderAll(){
   const kw=document.getElementById('searchInput').value.trim().toLowerCase();
   const fi=document.getElementById('filterIndustry').value;
   const fs=document.getElementById('filterStage').value;
-  let rows=appliedRows();
+  let rows=kw ? ALL_RECORDS.slice() : appliedRows();
   rows=rows.filter(r=>{
     const v=r.v; const st=getRec(r.id);
     if(kw){ const hay=(v['公司名称']||'')+' '+(v['招聘岗位']||'')+' '+(v['工作地点']||'')+' '+(v['行业']||''); if(!hay.toLowerCase().includes(kw)) return false; }
@@ -526,12 +595,12 @@ function renderAll(){
   });
   const body=document.getElementById('tableBody');
   const all=appliedRows().length;
-  document.getElementById('countBadge').textContent=`🏢 已投递：${all} 家`;
+  document.getElementById('countBadge').textContent=`🏢 已投递：${all} 家` + (window.SOURCE2_DATA?` · 总表 ${window.SOURCE2_DATA.records.length} 家`:'');
   document.getElementById('stTotal').textContent=all;
-  document.getElementById('countNote').textContent=`当前显示 ${rows.length} / ${all} 家`;
-  if(!all){
-    body.innerHTML=`<tr><td colspan="6"><div class="empty"><div class="big">📭</div>还没有已投递的公司<br><br>
-      去首页把投递过的公司标记为「已投递」，或直接创建：<br><br>
+  document.getElementById('countNote').textContent=`当前显示 ${rows.length} / ${kw?ALL_RECORDS.length+' 家（搜索全库）':all+' 家'}`;
+  if(!rows.length){
+    body.innerHTML=`<tr><td colspan="6"><div class="empty"><div class="big">📭</div>${kw?'没有找到匹配「'+kw+'」的公司':'还没有已投递的公司'}<br><br>
+      搜索支持全库（含「总表」新数据源公司）：输入公司名/岗位/地点/行业即可查找并标记投递：<br><br>
       <button class="header-btn" style="background:var(--primary);color:#fff;border:none" onclick="openEntryModal()">➕ 创建投递公司</button>
       <div style="margin-top:12px"><a class="link" href="index.html">← 返回首页标记</a></div>
     </div></td></tr>`;
