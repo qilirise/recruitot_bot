@@ -227,3 +227,11 @@ def write_daily_report(data):
 
 if __name__ == '__main__':
     main()
+
+
+# ===== 数据源2：2027届校招信息汇总表（腾讯普通表格，匿名接口） =====
+try:
+    import fetch_sheet2
+    fetch_sheet2.main()
+except Exception as _e:
+    print('[warn] source2 (sheet) fetch skipped:', _e)
