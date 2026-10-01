@@ -159,6 +159,7 @@ header .sub{margin-top:6px;font-size:13px;opacity:.92}
 .irc-del{background:#ef4444;color:#fff;border:none;border-radius:7px;padding:3px 12px;font-size:11.5px;cursor:pointer;font-weight:600}
 .irc-del:hover{background:#dc2626}
 @media(max-width:1200px){.interview-side{width:100%;min-width:0}}
+.rc-no{display:inline-block;margin-left:6px;padding:1px 6px;background:#eef2ff;color:#4f46e5;border-radius:6px;font-size:11px;font-weight:600}
 .reminder-card{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--amber);border-radius:var(--radius);padding:13px 16px;box-shadow:var(--shadow);transition:.15s}
 .reminder-card:hover{transform:translateY(-2px)}
 .reminder-card.overdue{border-left-color:var(--red);background:#fffafa}
@@ -699,6 +700,7 @@ function openAddItem(type){
   const dl=document.getElementById('addNameList');
   const names=new Set();
   (MAIN_TAB?MAIN_TAB.records:[]).forEach(r=>{ if(r.v['公司名称']) names.add(r.v['公司名称']); });
+  (window.SOURCE2_DATA&&window.SOURCE2_DATA.records||[]).forEach(r=>{ if(r['公司名称']) names.add(r['公司名称']); });
   customRecords().forEach(r=>{ if(r.v['公司名称']) names.add(r.v['公司名称']); });
   dl.innerHTML=[...names].map(n=>`<option value="${esc(n)}">`).join('');
   document.getElementById('addType').value = type || 'assess';
@@ -736,13 +738,12 @@ function addItemSubmit(){
   if(type==='assess'){
     const awrap=document.getElementById('addStrips');
     const links=awrap?Array.from(awrap.querySelectorAll('.strip-input')).map(x=>x.value.trim()).filter(Boolean):[];
-    setAssessLinks(st, links);
+    if(!links.length){ toast('⚠️ 请至少填写一个测评链接'); return; }
     const dl=document.getElementById('addDeadline').value;
     if(!dl){ toast('⚠️ 请填写测评截止日期（用于每日提醒）'); return; }
-    st.assessDeadline=dl;
-    if(!links.length){ toast('⚠️ 请至少填写一个测评链接'); return; }
+    const list=addAssessItem(st, links, dl);
     saveTrack(); renderReminder(); renderInterview(); applyFilters();
-    toast('✅ 已添加测评：'+name);
+    toast('✅ 已添加第 '+list.length+' 次测评：'+name);
   } else {
     const t=document.getElementById('addItvTime').value;
     const n=document.getElementById('addItvNote').value.trim();
@@ -799,6 +800,7 @@ document.getElementById('addItemModal').addEventListener('click',e=>{ if(e.targe
   </div>
 </div>
 <script src="data.js"></script>
+<script src="data_source2.js"></script>
 <script src="deepseek_usage.js"></script>
 <script src="offershow_data.js"></script>
 <script src="auth.js"></script>
@@ -822,19 +824,53 @@ try{ track = JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }catch(e){ track
 
 function saveTrack(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(track)); }catch(e){} window.Cloud&&Cloud.schedulePush&&Cloud.schedulePush(); }
 
-/* ===== 测评链接多链接支持（兼容旧单链接 assessLink） ===== */
-function getAssessLinks(st){
-  if(st && Array.isArray(st.assessLinks) && st.assessLinks.length) return st.assessLinks.filter(Boolean);
-  if(st && st.assessLink) return [st.assessLink];
+/* ===== 测评多条目（同一公司可多次测评，各自独立显示/完成） ===== */
+function getAssessList(st){
+  if(!st) return [];
+  if(Array.isArray(st.assessList) && st.assessList.length) return st.assessList;
+  const links = Array.isArray(st.assessLinks)?st.assessLinks.filter(Boolean):(st.assessLink?[st.assessLink]:[]);
+  if(links.length || st.assessDeadline) return [{id:'a_legacy', links:links, deadline:st.assessDeadline||'', done:!!st.assess, createdAt:''}];
   return [];
+}
+function writeAssessList(st, list){
+  const arr=(list||[]).filter(Boolean);
+  if(arr.length){ st.assessList=arr; } else { delete st.assessList; }
+  const first=arr[0];
+  if(first){
+    if(first.links && first.links.length) st.assessLinks=first.links.slice(); else delete st.assessLinks;
+    delete st.assessLink;
+    if(first.deadline) st.assessDeadline=first.deadline; else delete st.assessDeadline;
+  } else { delete st.assessLinks; delete st.assessLink; delete st.assessDeadline; }
+  st.assess = arr.length>0 && arr.every(x=>x.done);
+}
+function addAssessItem(st, links, deadline){
+  const list=getAssessList(st);
+  list.push({id:'a'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+             links:(links||[]).filter(Boolean), deadline:deadline||'', done:false, createdAt:new Date().toISOString()});
+  writeAssessList(st, list);
+  return list;
+}
+function updateAssessItem(st, aid, patch){
+  const list=getAssessList(st);
+  const it=list.find(x=>x.id===aid);
+  if(!it) return null;
+  Object.assign(it, patch||{});
+  writeAssessList(st, list);
+  return it;
+}
+function getAssessLinks(st){
+  const out=[];
+  getAssessList(st).forEach(x=>(x.links||[]).forEach(u=>{ if(u && out.indexOf(u)<0) out.push(u); }));
+  return out;
 }
 function setAssessLinks(st, arr){
   const a=(arr||[]).map(x=>String(x==null?'':x).trim()).filter(Boolean);
-  if(a.length){ st.assessLinks=a; delete st.assessLink; }
-  else { delete st.assessLinks; delete st.assessLink; }
+  const list=getAssessList(st);
+  if(!list.length) list.push({id:'a'+Date.now().toString(36), links:[], deadline:'', done:false, createdAt:new Date().toISOString()});
+  list[0].links=a;
+  writeAssessList(st, list);
   return a;
 }
-
 /* ===== 不感兴趣（隐藏的 offer） ===== */
 const HIDE_KEY = Auth.userKey('qiuzhao27_hided_v1');
 let hided = [];
@@ -927,6 +963,7 @@ function toggleApplied(rid,btn){
 }
 function toggleAssess(rid,btn){
   const st=getRec(rid); st.assess=!st.assess;
+  { const _l=getAssessList(st).map(x=>{ x.done=st.assess; return x; }); if(_l.length) writeAssessList(st,_l); }
   btn.classList.toggle('on-amber',st.assess); btn.textContent=st.assess?'📝 已测评':'⬜ 未测评';
   saveTrack(); refreshStats(); renderReminder(); toast(st.assess?'已标记测评':'已取消测评');
 }
@@ -994,12 +1031,13 @@ function saveAssess(rid){
   const vals=wrap?Array.from(wrap.querySelectorAll('.strip-input')).map(x=>x.value.trim()):[];
   const dl=document.getElementById('assessD_'+rid).value;
   setAssessLinks(st, vals);
-  if(dl) st.assessDeadline=dl; else delete st.assessDeadline;
+  const _l=getAssessList(st);
+  if(_l.length){ _l[0].links=vals.filter(Boolean); _l[0].deadline=dl||''; writeAssessList(st,_l); }
   saveTrack(); reRenderRow(rid); renderReminder(); toast('测评信息已保存 ✅');
 }
 function clearAssess(rid){
   const st=getRec(rid);
-  delete st.assessLinks; delete st.assessLink; delete st.assessDeadline;
+  delete st.assessList; delete st.assessLinks; delete st.assessLink; delete st.assessDeadline;
   saveTrack(); reRenderRow(rid); renderReminder(); toast('已清空测评信息');
 }
 function cancelAssess(rid){ const box=document.getElementById('assessEdit_'+rid); if(box) box.className='assess-edit'; }
@@ -1008,56 +1046,63 @@ function cancelAssess(rid){ const box=document.getElementById('assessEdit_'+rid)
 function renderReminder(){
   const grid=document.getElementById('reminderGrid');
   if(!grid) return;
-  if(!MAIN_TAB){ return; }
   const today=todayStr();
   const soon3=daysAgoStr(-3);
-  const recs=MAIN_TAB.records.filter(r=>{
+  // 数据源：主表 + 自定义公司（凡有 track 的公司均可设测评提醒，同公司可多条）
+  const sources=(MAIN_TAB?MAIN_TAB.records.slice():[]).concat(customRecords());
+  const cards=[];
+  sources.forEach(r=>{
     const st=track[r.id];
-    if(!st || st.assess) return false;          // 已完成测评的不提醒
-    if(!getAssessLinks(st).length && !st.assessDeadline) return false; // 没填测评信息的不管
-    return true;
-  }).map(r=>({r,st:track[r.id]}));
-  // 排序：已过期最前，然后按截止日期升序
-  recs.sort((a,b)=>{
-    const da=a.st.assessDeadline||'9999', db=b.st.assessDeadline||'9999';
+    if(!st) return;
+    const list=getAssessList(st);
+    list.forEach((it,idx)=>{
+      if(it.done) return;                                      // 该条已完成
+      if(!(it.links&&it.links.length) && !it.deadline) return;  // 未填信息
+      cards.push({r:r, st:st, it:it, no:idx+1, total:list.length});
+    });
+  });
+  cards.sort((a,b)=>{
+    const da=a.it.deadline||'9999', db=b.it.deadline||'9999';
     return da.localeCompare(db);
   });
-  document.getElementById('reminderCount').textContent=recs.length;
-  if(!recs.length){
-    grid.innerHTML='<div style="grid-column:1/-1;background:var(--card);border:1px dashed var(--border);border-radius:12px;padding:22px;text-align:center;color:var(--gray)">暂无待测评提醒 🎉<br><span style="font-size:12px">在表格行内点击「🔗 测评链接」添加测评网址和截止日期后，这里会自动提醒你</span></div>';
+  document.getElementById('reminderCount').textContent=cards.length;
+  if(!cards.length){
+    grid.innerHTML='<div style="grid-column:1/-1;background:var(--card);border:1px dashed var(--border);border-radius:12px;padding:22px;text-align:center;color:var(--gray)">暂无待测评提醒 🎉<br><span style="font-size:12px">点击「➕ 添加测评」或表格行内「🔗 测评链接」添加测评后，这里会自动提醒你（同一公司多次测评会分别显示）</span></div>';
     return;
   }
-  grid.innerHTML=recs.map(({r,st})=>{
-    const v=r.v; const links=getAssessLinks(st); const link=links[0]||'';
-    const dl=st.assessDeadline||'';
+  grid.innerHTML=cards.map(({r,st,it,no,total})=>{
+    const v=r.v; const links=(it.links||[]).filter(Boolean);
+    const dl=it.deadline||'';
+    const aid=it.id;
+    const key=r.id+'__'+aid;
     const overdue = dl && dl<today;
     const dueToday = dl===today;
     const soon = dl && !overdue && dl<=soon3;
     const cls = overdue?'overdue':dueToday?'today':soon?'soon':'';
     const status = overdue?'⚠️ 已过期':dueToday?'🔥 今天截止':soon?'⏳ 即将到期':'📅 待测评';
     const remain = dl ? (overdue?`已过期 ${Math.round((new Date(today)-new Date(dl))/86400000)} 天`:(dl===today?'今天截止':`剩 ${Math.round((new Date(dl)-new Date(today))/86400000)} 天`)) : '未填截止日期';
+    const badge = total>1?`<span class="rc-no">第 ${no}/${total} 次</span>`:'';
     return `<div class="reminder-card ${cls}">
-      <div class="rc-top"><span class="rc-name">${esc(v['公司名称']||'')}</span><span class="rc-status ${cls}">${status}</span></div>
+      <div class="rc-top"><span class="rc-name">${esc(v['公司名称']||'')}${badge}</span><span class="rc-status ${cls}">${status}</span></div>
       <div class="rc-link">${links.length?links.map((l,i)=>`<a href="${esc(l)}" target="_blank" rel="noopener">🔗 测评链接${links.length>1?'('+(i+1)+')':''}</a>`).join(' · '):'<span style="color:#94a3b8">未填测评链接</span>'}</div>
-      <div class="rc-meta"><span class="dl ${overdue?'overdue':dueToday?'today':''}">⏰ 截止：${esc(dl)||'—'}</span><button class="rc-edit-btn" onclick="openReminderDlEdit('${r.id}')">✏️ 编辑</button> · ${remain} · 🎯 ${esc(v['招聘岗位']||'')?esc(v['招聘岗位']).slice(0,30):''}</div>
+      <div class="rc-meta"><span class="dl ${overdue?'overdue':dueToday?'today':''}">⏰ 截止：${esc(dl)||'—'}</span><button class="rc-edit-btn" onclick="openReminderDlEdit('${r.id}','${aid}')">✏️ 编辑</button> · ${remain} · 🎯 ${esc(v['招聘岗位']||'')?esc(v['招聘岗位']).slice(0,30):''}</div>
       <div class="rc-btns">
-        <button class="rc-done" onclick="doneAssess('${r.id}')" title="标记测评已完成">✅ 完成</button>
-        <button class="rc-del" onclick="delAssess('${r.id}')" title="删除该公司的测评信息">🗑️ 删除</button>
+        <button class="rc-done" onclick="doneAssess('${r.id}','${aid}')" title="标记这条测评已完成">✅ 完成</button>
+        <button class="rc-del" onclick="delAssess('${r.id}','${aid}')" title="删除这条测评">🗑️ 删除</button>
       </div>
-      <div class="rc-dl-edit" id="rcDlEdit_${r.id}">
-        <div class="strip-wrap" id="rcStrips_${r.id}">${(links.length?links:['']).map((l,i)=>`<div class="strip-row">
+      <div class="rc-dl-edit" id="rcDlEdit_${key}">
+        <div class="strip-wrap" id="rcStrips_${key}">${(links.length?links:['']).map((l,i)=>`<div class="strip-row">
           <input type="url" class="strip-input" value="${esc(l)}" placeholder="测评链接（https://…）">
-          <button class="strip-add" onclick="addAssessStrip('rcStrips_${r.id}')" title="添加一条链接">＋</button>
-          <button class="strip-del" onclick="removeAssessStrip('rcStrips_${r.id}',${i})" title="删除这一条">×</button>
+          <button class="strip-add" onclick="addAssessStrip('rcStrips_${key}')" title="添加一条链接">＋</button>
+          <button class="strip-del" onclick="removeAssessStrip('rcStrips_${key}',${i})" title="删除这一条">×</button>
         </div>`).join('')}</div>
-        <input type="date" id="rcDlDate_${r.id}" value="${esc(dl)}">
-        <button class="ok" onclick="saveReminderDl('${r.id}')">保存</button>
-        <button class="no" onclick="cancelReminderDl('${r.id}')">取消</button>
+        <input type="date" id="rcDlDate_${key}" value="${esc(dl)}">
+        <button class="ok" onclick="saveReminderDl('${r.id}','${aid}','${key}')">保存</button>
+        <button class="no" onclick="cancelReminderDl('${key}')">取消</button>
       </div>
     </div>`;
   }).join('');
 }
-/* ===== 面试提醒（数据源：已投递里的面试时间 + 邮件面试事件） ===== */
 function renderInterview(){
   const list=document.getElementById('itvRemindList');
   const cnt=document.getElementById('itvRemindCount');
@@ -1153,27 +1198,30 @@ function renderInterview(){
 }
 
 /* ===== 测评：完成 / 删除 ===== */
-function doneAssess(rid){
+function doneAssess(rid, aid){
   const st=getRec(rid);
-  st.assess=true;
-  saveTrack();
-  renderReminder();
-  renderInterview();
-  reRenderRow(rid);
-  toast('✅ 已标记测评完成');
+  if(aid){
+    updateAssessItem(st, aid, {done:true});
+    toast('✅ 该条测评已完成');
+  } else {
+    const list=getAssessList(st).map(x=>{ x.done=true; return x; });
+    writeAssessList(st, list);
+    st.assess=true;
+    toast('✅ 已标记测评完成');
+  }
+  saveTrack(); renderReminder(); renderInterview(); reRenderRow(rid); refreshStats();
 }
-function delAssess(rid){
+function delAssess(rid, aid){
   const st=getRec(rid);
-  delete st.assessLinks; delete st.assessLink; delete st.assessDeadline;
-  if(st.assess) st.assess=false;
-  saveTrack();
-  renderReminder();
-  renderInterview();
-  reRenderRow(rid);
-  toast('🗑️ 测评信息已删除');
+  if(aid){
+    writeAssessList(st, getAssessList(st).filter(x=>x.id!==aid));
+    toast('已删除该条测评');
+  } else {
+    delete st.assessList; delete st.assessLinks; delete st.assessLink; delete st.assessDeadline; st.assess=false;
+    toast('已删除测评信息');
+  }
+  saveTrack(); renderReminder(); renderInterview(); reRenderRow(rid); refreshStats();
 }
-
-/* ===== 面试：完成 / 删除 ===== */
 function doneItv(rid,stage){
   const st=getRec(rid);
   if(!st.itv) st.itv={};
@@ -1199,25 +1247,31 @@ function delItv(rid,stage){
 }
 
 /* ===== 测评提醒卡片：修改截止日期 ===== */
-function openReminderDlEdit(rid){
+function openReminderDlEdit(rid, aid){
   document.querySelectorAll('.rc-dl-edit.show').forEach(el=>el.classList.remove('show'));
-  const box=document.getElementById('rcDlEdit_'+rid);
+  const box=document.getElementById('rcDlEdit_'+(aid?rid+'__'+aid:rid));
   if(box) box.classList.add('show');
 }
-function cancelReminderDl(rid){
-  const box=document.getElementById('rcDlEdit_'+rid);
+function cancelReminderDl(key){
+  const box=document.getElementById('rcDlEdit_'+key);
   if(box) box.classList.remove('show');
 }
-function saveReminderDl(rid){
-  const wrap=document.getElementById('rcStrips_'+rid);
-  const inp=document.getElementById('rcDlDate_'+rid);
+function saveReminderDl(rid, aid, key){
+  const wrap=document.getElementById('rcStrips_'+(key||rid));
+  const inp=document.getElementById('rcDlDate_'+(key||rid));
   if(!inp) return;
   const dl=inp.value;
   if(!dl){ toast('请选择日期'); return; }
   const st=getRec(rid);
-  const vals=wrap?Array.from(wrap.querySelectorAll('.strip-input')).map(x=>x.value.trim()):[];
-  setAssessLinks(st, vals);
-  st.assessDeadline=dl;
+  const vals=wrap?Array.from(wrap.querySelectorAll('.strip-input')).map(x=>x.value.trim()).filter(Boolean):[];
+  if(aid && getAssessList(st).some(x=>x.id===aid)){
+    updateAssessItem(st, aid, {links:vals, deadline:dl});
+  } else {
+    setAssessLinks(st, vals);
+    if(dl) st.assessDeadline=dl;
+    const list=getAssessList(st);
+    if(list.length){ list[0].deadline=dl; list[0].links=vals; writeAssessList(st,list); }
+  }
   saveTrack();
   renderReminder();
   toast('✅ 测评信息已更新');
