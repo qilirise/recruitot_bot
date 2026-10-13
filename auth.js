@@ -9,7 +9,7 @@
   const USERS_KEY = 'qiuzhao27_users_v1';
   const SESSION_KEY = 'qiuzhao27_session_v1';
   // 旧版（无用户后缀）的数据 key —— 用于首次登录时迁移老数据
-  const LEGACY_KEYS = ['qiuzhao27_track_v1', 'qiuzhao27_entries_v1', 'qiuzhao27_mail_processed_v1'];
+  const LEGACY_KEYS = ['qiuzhao27_track_v1', 'qiuzhao27_entries_v1'];
 
   /* ---------- 基础工具 ---------- */
   function getJSON(key, def){
