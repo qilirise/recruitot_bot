@@ -458,7 +458,7 @@ footer{margin-top:30px;text-align:center;font-size:12px;color:var(--gray);line-h
     <div class="stat today"><div class="num" id="stNew">0</div><div class="lbl">今日新开公司</div><div class="mini" id="stNew7">近7天 0 家</div></div>
     <div class="stat applied"><div class="num" id="stApplied">0</div><div class="lbl">已投递</div><div class="mini" id="stAppliedPct">--</div></div>
     <div class="stat assess"><div class="num" id="stAssess">0</div><div class="lbl">已测评</div><div class="mini" id="stAssessPct">--</div></div>
-    <div class="stat interview"><div class="num" id="stItv">0</div><div class="lbl">面试进行中</div><div class="mini" id="stItvDetail">一面 0 · 二面 0 · 三面 0</div></div>
+    <div class="stat interview"><div class="num" id="stItv">0</div><div class="lbl">面试进行中</div><div class="mini" id="stItvDetail">一面 0 · 二面 0 · 三面 0 · 四面 0</div></div>
     <div class="stat offer"><div class="num" id="stOffer">0</div><div class="lbl">已拿 Offer</div><div class="mini" id="stLose">挂了 0 家</div></div>
   </div>
 
@@ -683,6 +683,7 @@ document.getElementById('cloudModal').addEventListener('click',e=>{ if(e.target.
         <option value="1">🎤 一面</option>
         <option value="2">🎤 二面</option>
         <option value="3">🎤 三面</option>
+        <option value="4">🎤 四面</option>
       </select>
       <input type="datetime-local" id="addItvTime" style="margin-top:8px;width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;box-sizing:border-box">
       <input type="url" id="addItvLink" placeholder="面试链接（可选）" style="margin-top:8px;width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;box-sizing:border-box">
@@ -750,11 +751,11 @@ function addItemSubmit(){
     const lk=document.getElementById('addItvLink').value.trim();
     if(!t){ toast('请填写面试时间'); return; }
     if(!st.itv) st.itv={};
-    // 用户选择的面试轮次（一面/二面/三面）
+    // 用户选择的面试轮次（一面~四面）
     let stage=parseInt(document.getElementById('addItvStage').value,10)||1;
     st.itv[stage]={time:new Date(t).getTime(), note:n, link:lk, done:false};
     saveTrack(); renderInterview(); renderReminder(); applyFilters();
-    toast('✅ 已添加面试：'+name+'（第'+'一二三'[stage-1]+'面）');
+    toast('✅ 已添加面试：'+name+'（第'+'一二三四'[stage-1]+'面）');
   }
   closeAddItem();
 }
@@ -770,7 +771,7 @@ document.getElementById('addItemModal').addEventListener('click',e=>{ if(e.targe
       <p><b>2️⃣ 今日新开</b>：顶部卡片展示「更新日期 = 今天」的新开公司，点击「去投递」直达官网。</p>
       <p><b>3️⃣ 投递状况</b>：点击「未投递 / 已投递」按钮切换。</p>
       <p><b>4️⃣ 测评情况</b>：点击「未测评 / 已测评」按钮切换，点「🔗 测评链接」填写测评网址和截止日期。</p>
-      <p><b>5️⃣ 面试情况</b>：点击「一面 / 二面 / 三面」按钮弹出<b>面试时间安排</b>输入框，填写日期时间（可加备注），保存后显示在行内；再次点击可修改或清除。点小圆点标记该轮已完成。</p>
+      <p><b>5️⃣ 面试情况</b>：点击「一面 / 二面 / 三面 / 四面」按钮弹出<b>面试时间安排</b>输入框，填写日期时间（可加备注），保存后显示在行内；再次点击可修改或清除。点小圆点标记该轮已完成。</p>
       <p><b>6️⃣ Offer 情况</b>：点击「进行中 / 已Offer / 挂了」循环切换。</p>
       <p><b>7️⃣ 数据保存</b>：所有状态自动保存到浏览器 localStorage，关闭页面不丢失；换浏览器/清缓存会丢失。</p>
       <p><b>8️⃣ 筛选</b>：支持按关键词、更新日期、批次、行业、状态组合筛选。搜索不到的公司可直接「创建投递公司」。</p>
@@ -1118,7 +1119,7 @@ function renderInterview(){
       if(!st || !st.itv) return;
       const name=(MAIN_TAB&&MAIN_TAB.records.find(r=>r.id===rid)||{}).v?MAIN_TAB.records.find(r=>r.id===rid).v['公司名称']:'';
       const customName = name || (window.ENTRIES_DATA && window.ENTRIES_DATA.entries ? (window.ENTRIES_DATA.entries.find(e=>e.id===rid)||{}).name : '') || rid;
-      for(let s=1;s<=3;s++){
+      for(let s=1;s<=6;s++){
         const it=st.itv[s];
         if(!it || !it.time) continue;
         const d=new Date(it.time);
@@ -1132,7 +1133,7 @@ function renderInterview(){
           dateStr: d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'),
           timeStr: String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'),
           src: 'track',
-          stageName: '一二三'[s-1]+'面',
+          stageName: itvName(s),
           note: it.note||'',
           link: it.link||'',
         });
@@ -1167,7 +1168,7 @@ function renderInterview(){
   items.sort((a,b)=>a.dt-b.dt);
   if(cnt) cnt.textContent=items.length;
   if(!items.length){
-    list.innerHTML='<div style="background:var(--card);border:1px dashed var(--border);border-radius:12px;padding:22px;text-align:center;color:var(--gray);font-size:13px">暂无面试安排 🎉<br><span style="font-size:11.5px">在「已投递追踪」里点击一面/二面/三面填写面试时间，或邮件识别到面试邀请后，这里会自动提醒</span></div>';
+    list.innerHTML='<div style="background:var(--card);border:1px dashed var(--border);border-radius:12px;padding:22px;text-align:center;color:var(--gray);font-size:13px">暂无面试安排 🎉<br><span style="font-size:11.5px">在「已投递追踪」里点击一面~四面填写面试时间，或邮件识别到面试邀请后，这里会自动提醒</span></div>';
     return;
   }
   list.innerHTML=items.map(it=>{
@@ -1285,10 +1286,13 @@ function toggleOffer(rid,btn){
   toast(st.offer==='offered'?'恭喜！已标记 Offer 🎉':st.offer==='rejected'?'已标记挂了，继续加油':'状态重置为进行中');
 }
 /* interview: stage 1/2/3 */
+/* ===== 面试轮次名称（按钮 1~4；邮件识别的群面/终面 5/6 也显示） ===== */
+const ITV_NAMES={1:'一面',2:'二面',3:'三面',4:'四面',5:'群面',6:'终面'};
+function itvName(s){ return ITV_NAMES[s] || ('第'+s+'面'); }
 function itvChip(rid,stage){
   const st=getRec(rid); const it=st.itv[stage]||{};
   const has=!!it.time; const done=!!it.done;
-  const label={1:'一面',2:'二面',3:'三面'}[stage];
+  const label=itvName(stage);
   let cls='itv-chip'+(done?' done':has?' on':'');
   let txt=(done?'✅ ':'')+label+(has&&!done?' ✓':'');
   return `<button class="${cls}" data-rid="${rid}" data-stage="${stage}" onclick="openItvEdit('${rid}',${stage},this)">${txt}</button>`;
@@ -1296,9 +1300,9 @@ function itvChip(rid,stage){
 function itvCell(rid){
   const st=getRec(rid); const it=st.itv||{};
   const parts=[];
-  for(let s=1;s<=3;s++){ const t=it[s]; if(t&&t.time) parts.push({stage:s,time:t.time,note:t.note||'',done:!!t.done}); }
-  const html=parts.map(p=>`<div class="itv-time show" style="cursor:pointer" title="点击标记/取消该轮完成" onclick="toggleItvDone('${rid}',${p.stage})">${p.done?'✅':'📅'} 第${'一二三'[p.stage-1]}面：${fmtTime(p.time)}${p.note?' · '+esc(p.note):''}</div>`).join('');
-  return `<div class="itv-row">${[1,2,3].map(s=>itvChip(rid,s)).join('')}</div>
+  for(let s=1;s<=6;s++){ const t=it[s]; if(t&&t.time) parts.push({stage:s,time:t.time,note:t.note||'',done:!!t.done}); }
+  const html=parts.map(p=>`<div class="itv-time show" style="cursor:pointer" title="点击标记/取消该轮完成" onclick="toggleItvDone('${rid}',${p.stage})">${p.done?'✅':'📅'} ${itvName(p.stage)}：${fmtTime(p.time)}${p.note?' · '+esc(p.note):''}</div>`).join('');
+  return `<div class="itv-row">${[1,2,3,4].map(s=>itvChip(rid,s)).join('')}</div>
           <div class="itv-edit" id="itvEdit_${rid}"></div>${html}`;
 }
 function openItvEdit(rid,stage,btn){
@@ -1617,24 +1621,25 @@ function showRecent(){
 
 /* ============ 统计 ============ */
 function refreshStats(){
-  let applied=0,assess=0,itv1=0,itv2=0,itv3=0,itv1Total=0,itv2Total=0,itv3Total=0,offer=0,lose=0;
+  let applied=0,assess=0,offer=0,lose=0;
+  const itvNow={}, itvTot={};
+  for(let s=1;s<=6;s++){ itvNow[s]=0; itvTot[s]=0; }
   if(MAIN_TAB) MAIN_TAB.records.forEach(r=>{
     const st=getRec(r.id);
     if(st.applied) applied++;
     if(st.assess) assess++;
-    if(st.itv&&st.itv[1]&&st.itv[1].time){ itv1Total++; if(!st.itv[1].done) itv1++; }
-    if(st.itv&&st.itv[2]&&st.itv[2].time){ itv2Total++; if(!st.itv[2].done) itv2++; }
-    if(st.itv&&st.itv[3]&&st.itv[3].time){ itv3Total++; if(!st.itv[3].done) itv3++; }
+    if(st.itv){ for(let s=1;s<=6;s++){ if(st.itv[s]&&st.itv[s].time){ itvTot[s]++; if(!st.itv[s].done) itvNow[s]++; } } }
     if(st.offer==='offered') offer++;
     if(st.offer==='rejected') lose++;
   });
+  const sumNow=Object.keys(itvNow).reduce((a,k)=>a+itvNow[k],0);
   const total=MAIN_TAB?MAIN_TAB.records.length:0;
   document.getElementById('stApplied').textContent=applied;
   document.getElementById('stAppliedPct').textContent=total?`${Math.round(applied/total*100)}% 已投递率`:'';
   document.getElementById('stAssess').textContent=assess;
   document.getElementById('stAssessPct').textContent=total?`${Math.round(assess/total*100)}% 已测评率`:'';
-  document.getElementById('stItv').textContent=itv1+itv2+itv3;
-  document.getElementById('stItvDetail').textContent=`一面 ${itv1Total} · 二面 ${itv2Total} · 三面 ${itv3Total}`;
+  document.getElementById('stItv').textContent=sumNow;
+  document.getElementById('stItvDetail').textContent=`一面 ${itvTot[1]} · 二面 ${itvTot[2]} · 三面 ${itvTot[3]} · 四面 ${itvTot[4]}`;
   document.getElementById('stOffer').textContent=offer;
   document.getElementById('stLose').textContent=`挂了 ${lose} 家`;
   const d7=daysAgoStr(7);
@@ -1645,7 +1650,7 @@ function refreshStats(){
   const tc=document.getElementById('tcCount');
   if(tc){
     tc.textContent=applied;
-    document.getElementById('tcSub').innerHTML=`面试 ${itv1+itv2+itv3} 场 · 已Offer ${offer} 家<br>点击进入追踪管理`;
+    document.getElementById('tcSub').innerHTML=`面试 ${sumNow} 场 · 已Offer ${offer} 家<br>点击进入追踪管理`;
   }
 }
 
