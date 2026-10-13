@@ -147,7 +147,6 @@ header .sub{margin-top:6px;font-size:13px;opacity:.92}
 .itv-remind-card .irc-time{font-size:12.5px;color:var(--text);font-weight:600;white-space:nowrap}
 .itv-remind-card .irc-meta{font-size:11.5px;color:var(--gray);margin-top:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .itv-remind-card .irc-src{font-size:10px;padding:1px 7px;border-radius:9px;background:rgba(139,92,246,.12);color:#8b5cf6;font-weight:600}
-.itv-remind-card .irc-src.mail{background:rgba(59,130,246,.12);color:#3b82f6}
 .itv-remind-card .irc-days{font-size:11px;font-weight:700}
 .itv-remind-card .irc-days.today{color:#f59e0b}
 .itv-remind-card .irc-days.tomorrow{color:#3b82f6}
@@ -447,7 +446,6 @@ footer{margin-top:30px;text-align:center;font-size:12px;color:var(--gray);line-h
       <button class="header-btn ghost" onclick="manualRefresh()">🔄 刷新数据</button>
       <a class="header-btn" href="https://platform.deepseek.com/usage" target="_blank" rel="noopener" title="跳转 DeepSeek 平台查看余额用量" style="text-decoration:none">🤖 DeepSeek 用量</a>
       <button class="header-btn ghost" onclick="openCloudModal()" title="跨设备同步数据到 GitHub Gist">☁️ 云同步</button>
-      <a class="header-btn" href="mail.html" style="text-decoration:none">📧 邮件识别中心</a>
       <button class="header-btn" onclick="openGuide()">📖 使用说明</button>
       <span class="badge" id="userBadge">👤 --</span>
       <button class="header-btn ghost" onclick="doLogout()">🚪 退出</button>
@@ -577,7 +575,7 @@ function openDsModal(){ window.open('https://platform.deepseek.com/usage','_blan
   <div class="modal" style="max-width:440px">
     <h3>☁️ 云同步（跨设备共享）</h3>
     <div style="font-size:12.5px;color:var(--gray);line-height:1.8;margin-bottom:10px">
-      将当前账号的<b>全部数据</b>（投递/测评/面试/Offer/邮件处理/隐藏offer）存入一个<b>私有 GitHub Gist</b>，
+      将当前账号的<b>全部数据</b>（投递/测评/面试/Offer/隐藏offer）存入一个<b>私有 GitHub Gist</b>，
       同一账号在<b>任何设备</b>登录后即可同步共享。<br>
       <span style="color:var(--amber)">需要你的 GitHub Token（仅需 <b>gist</b> 权限，存于本浏览器，不会上传到任何服务器）</span>
     </div>
@@ -1141,34 +1139,11 @@ function renderInterview(){
     });
   }
 
-  // 2) 邮件识别的面试事件（type 含 interview 或 subject/正文含「面试/约面」）
-  const mev = window.MAIL_EVENTS && window.MAIL_EVENTS.events ? window.MAIL_EVENTS.events : [];
-  mev.forEach(ev=>{
-    const isItv = (ev.type||'').toLowerCase().indexOf('interview')>=0 ||
-                  (ev.type||'').toLowerCase().indexOf('面')>=0 ||
-                  /(面试|约面|面谈|终面)/.test((ev.subject||'')+(ev.body_excerpt||''));
-    if(!isItv) return;
-    const ds = (ev.date||'').trim();
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(ds)) return;
-    const d = new Date(ds+'T'+(ev.time||'09:00')+':00');
-    if(isNaN(d.getTime())) return;
-    items.push({
-      name: ev.companyGuess||ev.from||'未知公司',
-      dt: d,
-      dateStr: ds,
-      timeStr: ev.time||'--:--',
-      src: 'mail',
-      stageName: '邮件',
-      note: '',
-      link: ev.link||'',
-    });
-  });
-
   // 排序：按时间升序（最近的在前）
   items.sort((a,b)=>a.dt-b.dt);
   if(cnt) cnt.textContent=items.length;
   if(!items.length){
-    list.innerHTML='<div style="background:var(--card);border:1px dashed var(--border);border-radius:12px;padding:22px;text-align:center;color:var(--gray);font-size:13px">暂无面试安排 🎉<br><span style="font-size:11.5px">在「已投递追踪」里点击一面~四面填写面试时间，或邮件识别到面试邀请后，这里会自动提醒</span></div>';
+    list.innerHTML='<div style="background:var(--card);border:1px dashed var(--border);border-radius:12px;padding:22px;text-align:center;color:var(--gray);font-size:13px">暂无面试安排 🎉<br><span style="font-size:11.5px">在「已投递追踪」里点击一面~四面填写面试时间，，这里会自动提醒</span></div>';
     return;
   }
   list.innerHTML=items.map(it=>{
@@ -1185,7 +1160,7 @@ function renderInterview(){
         <span class="irc-time">${esc(ds)} ${esc(it.timeStr)}</span>
       </div>
       <div class="irc-meta">
-        <span class="irc-src ${it.src==='mail'?'mail':''}">${it.src==='mail'?'📮 邮件':'📋 已投递'} · ${esc(it.stageName)}</span>
+        <span class="irc-src">📋 已投递 · ${esc(it.stageName)}</span>
         <span class="irc-days ${daysCls}">${days}</span>
       </div>
       ${it.note?`<div class="irc-meta">📝 ${esc(it.note)}</div>`:''}
@@ -1286,7 +1261,7 @@ function toggleOffer(rid,btn){
   toast(st.offer==='offered'?'恭喜！已标记 Offer 🎉':st.offer==='rejected'?'已标记挂了，继续加油':'状态重置为进行中');
 }
 /* interview: stage 1/2/3 */
-/* ===== 面试轮次名称（按钮 1~4；邮件识别的群面/终面 5/6 也显示） ===== */
+/* ===== 面试轮次名称（按钮 1~4；5/6 兼容既有数据） ===== */
 const ITV_NAMES={1:'一面',2:'二面',3:'三面',4:'四面',5:'群面',6:'终面'};
 function itvName(s){ return ITV_NAMES[s] || ('第'+s+'面'); }
 function itvChip(rid,stage){
