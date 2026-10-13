@@ -114,7 +114,7 @@ function cleanOthers(){
     if(KEEP_LIST.includes(u.username)) return;
     removed.push(u.username);
     // 删除该用户的数据 key
-    ['qiuzhao27_track_v1','qiuzhao27_entries_v1','qiuzhao27_mail_processed_v1'].forEach(base=>{
+    ['qiuzhao27_track_v1','qiuzhao27_entries_v1'].forEach(base=>{
       try{ localStorage.removeItem(base + '_' + u.uid); }catch(e){}
     });
   });
