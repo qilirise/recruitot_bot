@@ -471,18 +471,21 @@ function toggleApplied(rid,btn){
   const st=getRec(rid); st.applied=!st.applied;
   saveTrack(); renderAll(); toast(st.applied?'已标记投递':'已取消投递（刷新后不再被书签自动标记）');
 }
+/* ===== 面试轮次名称（按钮 1~4；邮件识别的群面/终面 5/6 也显示） ===== */
+const ITV_NAMES={1:'一面',2:'二面',3:'三面',4:'四面',5:'群面',6:'终面'};
+function itvName(s){ return ITV_NAMES[s] || ('第'+s+'面'); }
 function itvChip(rid,stage){
   const st=getRec(rid); const it=st.itv[stage]||{};
   const has=!!it.time; const done=!!it.done;
-  const label={1:'一面',2:'二面',3:'三面'}[stage];
+  const label=itvName(stage);
   return `<button class="itv-chip ${done?'done':has?'on':''}" onclick="openItvEdit('${rid}',${stage})">${done?'✅ ':''}${label}${has&&!done?' ✓':''}</button>`;
 }
 function itvCell(rid){
   const st=getRec(rid); const it=st.itv||{};
   const parts=[];
-  for(let s=1;s<=3;s++){ const t=it[s]; if(t&&t.time) parts.push({stage:s,time:t.time,note:t.note||'',link:t.link||'',done:!!t.done}); }
-  const html=parts.map(p=>`<div class="itv-time show" style="cursor:pointer" title="点击标记/取消完成" onclick="toggleItvDone('${rid}',${p.stage})">${p.done?'✅':'📅'} 第${'一二三'[p.stage-1]}面：${fmtTime(p.time)}${p.link?` · 🔗 <a href="${esc(p.link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">链接</a>`:''}${p.note?' · '+esc(p.note):''}</div>`).join('');
-  return `<div class="itv-row">${[1,2,3].map(s=>itvChip(rid,s)).join('')}</div>
+  for(let s=1;s<=6;s++){ const t=it[s]; if(t&&t.time) parts.push({stage:s,time:t.time,note:t.note||'',link:t.link||'',done:!!t.done}); }
+  const html=parts.map(p=>`<div class="itv-time show" style="cursor:pointer" title="点击标记/取消完成" onclick="toggleItvDone('${rid}',${p.stage})">${p.done?'✅':'📅'} ${itvName(p.stage)}：${fmtTime(p.time)}${p.link?` · 🔗 <a href="${esc(p.link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">链接</a>`:''}${p.note?' · '+esc(p.note):''}</div>`).join('');
+  return `<div class="itv-row">${[1,2,3,4].map(s=>itvChip(rid,s)).join('')}</div>
           <div class="itv-edit" id="itvEdit_${rid}"></div>${html}`;
 }
 function openItvEdit(rid,stage){
@@ -620,7 +623,7 @@ function renderAll(){
     const st=getRec(r.id);
     if(st.applied) applied++;
     if(st.assess) assess++;
-    if(st.itv){ for(let s=1;s<=3;s++){ if(st.itv[s]&&st.itv[s].time&&!st.itv[s].done) itv++; } }
+    if(st.itv){ for(let s=1;s<=6;s++){ if(st.itv[s]&&st.itv[s].time&&!st.itv[s].done) itv++; } }
     if(st.offer==='offered') offer++;
     if(st.offer==='rejected') lose++;
   });
