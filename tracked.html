@@ -471,7 +471,7 @@ function toggleApplied(rid,btn){
   const st=getRec(rid); st.applied=!st.applied;
   saveTrack(); renderAll(); toast(st.applied?'已标记投递':'已取消投递（刷新后不再被书签自动标记）');
 }
-/* ===== 面试轮次名称（按钮 1~4；邮件识别的群面/终面 5/6 也显示） ===== */
+/* ===== 面试轮次名称（按钮 1~4；5/6 兼容既有数据） ===== */
 const ITV_NAMES={1:'一面',2:'二面',3:'三面',4:'四面',5:'群面',6:'终面'};
 function itvName(s){ return ITV_NAMES[s] || ('第'+s+'面'); }
 function itvChip(rid,stage){
