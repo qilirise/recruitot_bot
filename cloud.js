@@ -1,7 +1,7 @@
 /* ============================================================
  * cloud.js - 云端存储层（GitHub Gist 同步）
  * ------------------------------------------------------------
- * 目标：同一账号跨设备共享数据（投递/测评/面试/Offer/邮件处理/隐藏offer）
+ * 目标：同一账号跨设备共享数据（投递/测评/面试/Offer/隐藏offer）
  * 原理：
  *   - 每个账号的数据打包为 JSON，存入一个「私有 Gist」
  *   - 用户提供自己的 GitHub PAT（仅需 gist 权限），存于浏览器 localStorage（按账号隔离）
@@ -28,7 +28,7 @@
   // 收集当前账号在 localStorage 中的全部数据 key（按 uid 隔离，内容为逻辑键）
   function collectData(){
     const uid = window.CURRENT_USER ? CURRENT_USER.uid : 'anon';
-    const keys = ['qiuzhao27_track_v1','qiuzhao27_entries_v1','qiuzhao27_mail_processed_v1','qiuzhao27_hided_v1'];
+    const keys = ['qiuzhao27_track_v1','qiuzhao27_entries_v1','qiuzhao27_hided_v1'];
     const out = {};
     keys.forEach(base=>{
       const k = base + '_' + uid;
@@ -44,7 +44,7 @@
   function applyData(data, merge){
     if(!data || typeof data !== 'object') return;
     const uid = window.CURRENT_USER ? CURRENT_USER.uid : 'anon';
-    const keys = ['qiuzhao27_track_v1','qiuzhao27_entries_v1','qiuzhao27_mail_processed_v1','qiuzhao27_hided_v1'];
+    const keys = ['qiuzhao27_track_v1','qiuzhao27_entries_v1','qiuzhao27_hided_v1'];
     keys.forEach(base=>{
       const k = base + '_' + uid;
       if(data[base] === undefined) return;
