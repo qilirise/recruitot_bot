@@ -227,9 +227,9 @@ def classify_and_extract(mail, cfg):
         link = links[0] if links else ''
         # 面试阶段判断
         stage = 0
-        for i, k in enumerate(['一面', '二面', '三面', '群面', '终面']):
+        for i, k in enumerate(['一面', '二面', '三面', '四面', '群面', '终面']):
             if k in text:
-                stage = i + 1 if i < 3 else (4 if k == '群面' else 5)
+                stage = i + 1 if i < 4 else (5 if k == '群面' else 6)
                 break
 
     return {
