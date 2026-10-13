@@ -4,7 +4,6 @@
 27秋招本地服务（静态文件 + API 刷新端点）
 - 静态托管整个 27秋招 目录
 - GET /api/refresh-deepseek : 重新抓取 DeepSeek 余额，刷新 deepseek_usage.js
-- GET /api/refresh-mail      : 重新读取邮件，刷新 mail_events.js
 用法: python server.py [端口]   （默认 8000）
 """
 import http.server, socketserver, subprocess, json, os, sys, urllib.parse
@@ -36,8 +35,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         path = parsed.path
         if path == '/api/refresh-deepseek':
             return self._api_refresh('fetch_deepseek.py')
-        if path == '/api/refresh-mail':
-            return self._api_refresh('read_mail.py')
         return super().do_GET()
 
     def _api_refresh(self, script):
